@@ -15,14 +15,38 @@ module CheddarGetter
     def initialize(response)
       self.raw_response = response
       self.clean_response = response.parsed_response.is_a?(Hash) ? fix_keys(response.parsed_response) : { }
+      
+      #because Crack can't get attributes and text at the same time.  grrrr
+      unless self.valid?
+        self.clean_response = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
+                                                                           '<error\1><text>\2</text></error>'))
+        
+        aux_code = (self.error["auxCode"] || "")
+        if aux_code[":"]
+          split_aux_code = aux_code.split(':')
+          self.error["fieldName"] = split_aux_code.first
+          self.error["errorType"] = split_aux_code.last
+        end
+      end
+      
+    end
+    
+    def error
+      self['error']
     end
     
     def valid?
-      !self['error'] && raw_response.code == 200
+      !self.error
     end
     
     def error_message
-      self['error'] || raw_response.code
+      e = self.error
+      msg = nil
+      if e
+        msg = e['text']
+        msg += ": #{e['fieldName']}" unless e['fieldName'].blank?
+      end
+      msg
     end
     
     def plans

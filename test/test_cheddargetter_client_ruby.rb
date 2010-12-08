@@ -78,22 +78,145 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
   end
   
   should "create a single free customer at cheddar getter" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
     result = CG.new_customer(free_new_user_hash(1))
     assert_equal 1, result.customers.size
     assert_equal "1", result.customer['code']
     assert_equal "Free Plan Test", result.customer_plan['name']
-    result = CG.delete_all_customers
-    assert true, result.valid?
   end
   
   should "create a single paid customer at cheddar getter" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
     result = CG.new_customer(paid_new_user_hash(1))
     assert_equal 1, result.customers.size
     assert_equal "1", result.customer['code']
     assert_equal "Test Plan 2", result.customer_plan['name']
     assert_equal "20.00", result.customer_invoice['charges'].first['eachAmount']
+  end
+  
+  should "try to create a customer with various errors" do
     result = CG.delete_all_customers
-    assert true, result.valid?
+    assert_equal true, result.valid?
+    
+    data = paid_new_user_hash(1)
+    data[:subscription].delete(:ccCardCode)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccCardCode]", result.error_message
+    
+    data[:subscription][:ccExpiration] = "00/0000"
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal("'00/0000' is not a valid date in format MM/YYYY: subscription[ccExpiration]", 
+                 result.error_message)
+    
+    data[:subscription].delete(:ccExpiration)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccExpiration]", result.error_message
+    
+    data[:subscription][:ccNumber] = "1"
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal("'1' is not from an allowed institute: subscription[ccNumber]", 
+                 result.error_message)
+    
+    data[:subscription].delete(:ccNumber)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccNumber]", result.error_message
+    
+    data[:subscription].delete(:ccZip)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccZip]", result.error_message
+    
+    data[:subscription].delete(:ccLastName)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccLastName]", result.error_message
+    
+    data[:subscription].delete(:ccFirstName)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: subscription[ccFirstName]", result.error_message
+    
+    data.delete(:email)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: email", result.error_message
+    
+    data.delete(:code)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: code", result.error_message
+    
+    data.delete(:lastName)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: lastName", result.error_message
+    
+    data.delete(:firstName)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: firstName", result.error_message
+    
+    data[:subscription][:planCode] = "NOT_A_PLAN"
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "No plan found with code=NOT_A_PLAN", result.error_message
+
+    data[:subscription].delete(:planCode)
+    result = CG.new_customer(data)
+    assert_equal false, result.valid?
+    assert_equal "A pricing plan is required", result.error_message
+  end
+  
+  should "try to create a customer with direct forced card errors" do
+    error_codes = { 
+      1000 => "An unexpected error occured.  Please try again later.",
+      1001 => "The record already exists",
+      1002 => "An unexpected error occured.  Please try again later.",
+      1003 => "An unexpected error occured.  Please try again later.",
+      2000 => "The local gateway configuration is incompatible",
+      2001 => "The configuration at the gateway is incompatible",
+      2002 => "Authentication to the gateway failed",
+      2003 => "The gateway has denied access",
+      3000 => "The response from the gateway was not recognized",
+      4000 => "The connection to the gateway failed.  Please try again later.",
+      5000 => "There was an error processing the transaction",
+      5001 => "Credit card number is invalid",
+      5002 => "Expiration date is invalid",
+      5003 => "Credit card type is not accepted",
+      6000 => "The transaction was declined",
+      6001 => "The transaction was declined due to AVS mismatch",
+      6002 => "The transaction was declined due to card code verification failure",
+      7000 => "The transaction failed for an unknown reason"
+    }
+    
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    error_codes.each do |k, v|
+      result = CG.new_customer(paid_new_user_hash(1, "0#{k}"))
+      assert_equal false, result.valid?
+      assert_equal v, result.error_message
+    end
+
+  end
+  
+  should "try to create two customers with same code" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal false, result.valid?
+    assert_equal "Another customer already exists with code=1: code", result.error_message
   end
   
 end
