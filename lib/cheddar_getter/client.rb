@@ -236,6 +236,11 @@ module CheddarGetter
     end
     
     def do_request(options)
+      data = options[:data]
+      if data && data[:subscription] && data[:subscription][:ccExpiration].respond_to?(:strftime)
+        data[:subscription][:ccExpiration] = data[:subscription][:ccExpiration].strftime("%m/%Y")
+      end
+      
       path = "/xml/#{options[:item]}/#{options[:action]}"
       path += get_identifier_string(options[:id_hash]) if options[:id_hash]
       path += if product_code
@@ -246,8 +251,8 @@ module CheddarGetter
                 raise CheddarGetter::ClientException.new("A product code or id is required to make requests.")
               end
       
-      response = if options[:data]
-                   CheddarGetter::Client.post(path, :body => options[:data], :basic_auth => { 
+      response = if data
+                   CheddarGetter::Client.post(path, :body => data, :basic_auth => { 
                                                 :username => self.username, 
                                                 :password => self.password
                                               })

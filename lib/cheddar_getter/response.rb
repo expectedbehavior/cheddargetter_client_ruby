@@ -1,38 +1,50 @@
 module CheddarGetter
   class Response
-    SPECIAL = {
-      "plans" => "plan", 
-      "items" => "item",
-      "subscriptions" => "subscription",
-      "customers" => "customer",
-      "invoices" => "invoice",
-      "charges" => "charge",
-      "transactions" => "transaction"
+    SPECIAL_ARRAY_KEYS = {
+      :plans => :plan, 
+      :items => :item,
+      :subscriptions => :subscription,
+      :customers => :customer,
+      :invoices => :invoice,
+      :charges => :charge,
+      :transactions => :transaction
+    }
+    
+    KEY_TO_DATA_TYPE = { 
+      :isActive => :boolean,
+      :isFree => :boolean,
+      :trialDays => :integer,
+      :setupChargeAmount => :float,
+      :recurringChargeAmount => :float,
+      :billingFrequencyQuantity => :integer,
+      :createdDatetime => :datetime,
+      :quantityIncluded => :float,
+      :isPeriodic => :boolean,
+      :overageAmount => :float,
+      :isVatExempt => :boolean,
+      :firstContactDatetime => :datetime,
+      :modifiedDatetime => :datetime,
+      :canceledDatetime => :datetime,
+      :ccExpirationDate => :date,
+      :quantity => :float,
+      :billingDatetime => :datetime,
+      :eachAmount => :float,
+      :number => :integer,
+      :amount => :float,
+      :transactedDatetime => :datetime
     }
     
     attr_accessor :raw_response, :clean_response
     
     def initialize(response)
       self.raw_response = response
-      self.clean_response = response.parsed_response.is_a?(Hash) ? fix_keys(response.parsed_response) : { }
-      
-      #because Crack can't get attributes and text at the same time.  grrrr
-      unless self.valid?
-        self.clean_response = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
-                                                                           '<error\1><text>\2</text></error>'))
-        
-        aux_code = (self.error["auxCode"] || "")
-        if aux_code[":"]
-          split_aux_code = aux_code.split(':')
-          self.error["fieldName"] = split_aux_code.first
-          self.error["errorType"] = split_aux_code.last
-        end
-      end
-      
+      create_clean_response
     end
     
-    def error
-      self['error']
+    [:error, :plans, :customers].each do |key|
+      define_method key.to_s do
+        self[key]
+      end
     end
     
     def valid?
@@ -43,54 +55,46 @@ module CheddarGetter
       e = self.error
       msg = nil
       if e
-        msg = e['text']
-        msg += ": #{e['fieldName']}" unless e['fieldName'].blank?
+        msg = e[:text]
+        msg += ": #{e[:fieldName]}" unless e[:fieldName].blank?
       end
       msg
     end
     
-    def plans
-      self['plans']
-    end
-    
-    def customers
-      self['customers']
-    end
-    
     def plan(code = nil)
-      retrieve_item(self, 'plans', code)
+      retrieve_item(self, :plans, code)
     end
     
     def plan_items(code = nil)
-      (plan(code) || { })['items']
+      (plan(code) || { })[:items]
     end
     
     def plan_item(code = nil, item_code = nil)
-      retrieve_item(plan(code), 'items', item_code)
+      retrieve_item(plan(code), :items, item_code)
     end
     
     def customer(code = nil)
-      retrieve_item(self, 'customers', code)
+      retrieve_item(self, :customers, code)
     end
     
     def customer_subscription(code = nil)
-      retrieve_item(customer(code), 'subscriptions')
+      retrieve_item(customer(code), :subscriptions)
     end
     
     def customer_subscriptions(code = nil)
-      (customer(code) || { })['subscriptions']
+      (customer(code) || { })[:subscriptions]
     end
     
     def customer_plan(code = nil)
-      retrieve_item(customer_subscription(code), 'plans')
+      retrieve_item(customer_subscription(code), :plans)
     end
     
     def customer_invoice(code = nil)
-      ((customer_subscription(code) || { })['invoices'] || []).first
+      ((customer_subscription(code) || { })[:invoices] || []).first
     end
     
     def customer_invoices(code = nil)
-      customer_subscriptions(code).map{ |s| s['invoices'] || [] }.flatten
+      customer_subscriptions(code).map{ |s| s[:invoices] || [] }.flatten
     end
     
     def customer_last_billed_invoice(code = nil)
@@ -98,35 +102,35 @@ module CheddarGetter
     end
     
     def customer_transactions(code = nil)
-      customer_invoices(code).map{ |s| s['transactions'] || [] }.flatten
+      customer_invoices(code).map{ |s| s[:transactions] || [] }.flatten
     end
     
     def customer_last_transaction(code = nil)
       invoice = customer_last_billed_invoice(code) || { }
-      (invoice['transactions'] || []).first
+      (invoice[:transactions] || []).first
     end
     
     def customer_outstanding_invoices(code = nil)
       now = DateTime.now
       customer_invoices(code).reject do |i| 
-        i['paidTransactionId'] || i['billingDatetime'].to_datetime > now
+        i[:paidTransactionId] || i[:billingDatetime] > now
       end
     end
     
     def customer_item_quantity(code = nil, item_code = nil)
       sub = customer_subscription(code)
       return nil unless sub
-      sub_item = retrieve_item(sub, 'items', item_code)
-      plan_item = retrieve_item(retrieve_item(sub, 'plans'), 'items', item_code)
+      sub_item = retrieve_item(sub, :items, item_code)
+      plan_item = retrieve_item(retrieve_item(sub, :plans), :items, item_code)
       return nil unless sub_item && plan_item
       item = plan_item.dup
-      item["quantity"] = sub_item["quantity"]
+      item[:quantity] = sub_item[:quantity]
       item
     end
     
     def customer_item_quantity_remaining(code = nil, item_code = nil)
       item = customer_item_quantity(code, item_code)
-      item ? item["quantityIncluded"].to_f - item["quantity"].to_f : 0
+      item ? item[:quantityIncluded] - item[:quantity] : 0
     end
     
     def customer_item_quantity_overage(code = nil, item_code = nil)
@@ -138,7 +142,7 @@ module CheddarGetter
     def customer_item_quantity_overage_cost(code = nil, item_code = nil)
       item = customer_item_quantity(code, item_code)
       overage = customer_item_quantity_overage(code, item_code)
-      item['overageAmount'].to_f * overage
+      item[:overageAmount] * overage
     end
     
     def [](value)
@@ -147,32 +151,92 @@ module CheddarGetter
     
     
     private
-    def fix_keys(hash)
-      hash.each do |k, v|
-        if v.is_a?(Hash)
-          if SPECIAL.keys.include?(k) && v.keys.size == 1 && v[SPECIAL[k]]
-            hash[k] = v = [v[SPECIAL[k]]].flatten
-          else
-            fix_keys(v)
-          end
+    def deep_fix_array_keys!(data)
+      if data.is_a?(Array)
+        data.each do |v|
+          deep_fix_array_keys!(v)
         end
-        
-        if v.is_a?(Array)
-          v.each do |i|
-            fix_keys(i) if i.is_a?(Hash)
+      elsif data.is_a?(Hash)
+        data.each do |k, v|
+          deep_fix_array_keys!(v)
+          sub_key = SPECIAL_ARRAY_KEYS[k]
+          if sub_key && v.is_a?(Hash) && v.keys.size == 1 && v[sub_key]
+            data[k] = v = [v[sub_key]].flatten
           end
         end
       end
+    end
+    
+    def deep_symbolize_keys!(data)
+      if data.is_a?(Array)
+        data.each do |v|
+          deep_symbolize_keys!(v) 
+        end
+      elsif data.is_a?(Hash)
+        data.keys.each do |key|
+          deep_symbolize_keys!(data[key]) 
+          data[(key.to_sym rescue key) || key] = data.delete(key)
+        end
+      end
+    end
+    
+    def deep_fix_data_types!(data)
+      if data.is_a?(Array)
+        data.each do |v|
+          deep_fix_data_types!(v) 
+        end
+      elsif data.is_a?(Hash)
+        data.each do |k, v|
+          deep_fix_data_types!(v)
+          type = KEY_TO_DATA_TYPE[k]
+          if type && v.is_a?(String)
+            data[k] = case type
+                        when :integer then v.to_i
+                        when :float then v.to_f
+                        when :datetime then DateTime.parse(v) rescue v
+                        when :date then Date.parse(v) rescue v
+                        when :boolean then v.to_i != 0
+                        else v
+                        end
+          end
+        end
+      end
+    end
+    
+    def create_clean_response
+      data = self.raw_response.parsed_response.is_a?(Hash) ? self.raw_response.parsed_response : { }
+      deep_symbolize_keys!(data)
+      deep_fix_array_keys!(data)
+      deep_fix_data_types!(data)
+      self.clean_response = data
+      
+      #because Crack can:t get attributes and text at the same time.  grrrr
+      unless self.valid?
+        data = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
+                                                            '<error\1><text>\2</text></error>'))
+        deep_symbolize_keys!(data)
+        deep_fix_array_keys!(data)
+        deep_fix_data_types!(data)
+        self.clean_response = data
+        
+        aux_code = (self.error[:auxCode] || "")
+        if aux_code[":"]
+          split_aux_code = aux_code.split(':')
+          self.error[:fieldName] = split_aux_code.first
+          self.error[:errorType] = split_aux_code.last
+        end
+      end
+      
     end
     
     def retrieve_item(hash, type, code = nil)
       array = hash[type]
       if !array
         raise CheddarGetter::ResponseException.new(
-          "Can't get #{type} from a response that doesn't contain #{type}")
+          "Can:t get #{type} from a response that doesn:t contain #{type}")
       elsif code
         code = code.to_s
-        array.detect{ |p| p['code'].to_s == code }
+        array.detect{ |p| p[:code].to_s == code }
       elsif array.size <= 1
         array.first
       else
