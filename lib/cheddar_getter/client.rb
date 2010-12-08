@@ -41,6 +41,7 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#add-customer
+    #data:
     #{ 
     #  :code                 => required,
     #  :firstName            => required,
@@ -96,6 +97,7 @@ module CheddarGetter
     
     #https://cheddargetter.com/developers#update-customer-subscription
     #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #data:
     #{ 
     #  :firstName            => not_required,
     #  :lastName             => not_required,

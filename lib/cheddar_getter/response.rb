@@ -69,7 +69,7 @@ module CheddarGetter
       (plan(code) || { })[:items]
     end
     
-    def plan_item(code = nil, item_code = nil)
+    def plan_item(item_code = nil, code = nil)
       retrieve_item(plan(code), :items, item_code)
     end
     
@@ -78,7 +78,8 @@ module CheddarGetter
     end
     
     def customer_subscription(code = nil)
-      retrieve_item(customer(code), :subscriptions)
+      #current subscription is always the first one
+      (customer_subscriptions(code) || []).first
     end
     
     def customer_subscriptions(code = nil)
@@ -86,19 +87,21 @@ module CheddarGetter
     end
     
     def customer_plan(code = nil)
-      retrieve_item(customer_subscription(code), :plans)
+      ((customer_subscription(code) || { })[:plans] || []).first
     end
     
     def customer_invoice(code = nil)
+      #current invoice is always the first one
       ((customer_subscription(code) || { })[:invoices] || []).first
     end
     
     def customer_invoices(code = nil)
-      customer_subscriptions(code).map{ |s| s[:invoices] || [] }.flatten
+      (customer_subscriptions(code) || []).map{ |s| s[:invoices] || [] }.flatten
     end
     
     def customer_last_billed_invoice(code = nil)
-      customer_invoices(code)[1]
+      #last billed invoice is always the second one
+      (customer_invoices(code) || [])[1]
     end
     
     def customer_transactions(code = nil)
@@ -117,7 +120,7 @@ module CheddarGetter
       end
     end
     
-    def customer_item_quantity(code = nil, item_code = nil)
+    def customer_item(item_code = nil, code = nil)
       sub = customer_subscription(code)
       return nil unless sub
       sub_item = retrieve_item(sub, :items, item_code)
@@ -128,20 +131,21 @@ module CheddarGetter
       item
     end
     
-    def customer_item_quantity_remaining(code = nil, item_code = nil)
-      item = customer_item_quantity(code, item_code)
+    def customer_item_quantity_remaining(item_code = nil, code = nil)
+      item = customer_item(item_code, code)
       item ? item[:quantityIncluded] - item[:quantity] : 0
     end
     
-    def customer_item_quantity_overage(code = nil, item_code = nil)
-      over = -customer_item_quantity_remaining(code, item_code)
+    def customer_item_quantity_overage(item_code = nil, code = nil)
+      over = -customer_item_quantity_remaining(item_code, code)
       over = 0 if over <= 0
       over
     end
     
-    def customer_item_quantity_overage_cost(code = nil, item_code = nil)
-      item = customer_item_quantity(code, item_code)
-      overage = customer_item_quantity_overage(code, item_code)
+    def customer_item_quantity_overage_cost(item_code = nil, code = nil)
+      item = customer_item(item_code, code)
+      return 0 unless item
+      overage = customer_item_quantity_overage(item_code, code)
       item[:overageAmount] * overage
     end
     
