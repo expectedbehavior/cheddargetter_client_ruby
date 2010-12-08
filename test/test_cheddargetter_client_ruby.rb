@@ -1,6 +1,37 @@
 require 'helper'
 
 class TestCheddargetterClientRuby < Test::Unit::TestCase
+  
+  def free_new_user_hash(id)
+    { 
+      :code                 => id,
+      :firstName            => "First",
+      :lastName             => "Last",
+      :email                => "email@example.com",
+      :subscription => { 
+        :planCode        => "FREE_PLAN_TEST",
+      },
+    }
+  end
+  
+  def paid_new_user_hash(id, cc_error = nil)
+    { 
+      :code                 => id,
+      :firstName            => "First",
+      :lastName             => "Last",
+      :email                => "email@example.com",
+      :subscription => { 
+        :planCode        => "TEST_PLAN_2",
+        :ccNumber        => "4111111111111111",
+        :ccExpiration    => "08/2012",
+        :ccCardCode      => "123",
+        :ccFirstName     => "ccFirst",
+        :ccLastName      => "ccLast",
+        :ccZip           => cc_error ? cc_error : "11361"
+      },
+    }
+  end
+  
   should "get 3 plans from cheddar getter" do
     result = CG.get_plans
     assert_equal 3, result.plans.size
@@ -44,6 +75,25 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     result = CG.get_plan(:code => "NOT_A_PLAN")
     assert_equal false, result.valid?
     assert_equal "Plan not found for code=NOT_A_PLAN within productCode=GEM_TEST", result.error_message
+  end
+  
+  should "create a single free customer at cheddar getter" do
+    result = CG.new_customer(free_new_user_hash(1))
+    assert_equal 1, result.customers.size
+    assert_equal "1", result.customer['code']
+    assert_equal "Free Plan Test", result.customer_plan['name']
+    result = CG.delete_all_customers
+    assert true, result.valid?
+  end
+  
+  should "create a single paid customer at cheddar getter" do
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal 1, result.customers.size
+    assert_equal "1", result.customer['code']
+    assert_equal "Test Plan 2", result.customer_plan['name']
+    assert_equal "20.00", result.customer_invoice['charges'].first['eachAmount']
+    result = CG.delete_all_customers
+    assert true, result.valid?
   end
   
 end

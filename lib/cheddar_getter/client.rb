@@ -246,8 +246,6 @@ module CheddarGetter
                 raise CheddarGetter::ClientException.new("A product code or id is required to make requests.")
               end
       
-      puts path
-      
       response = if options[:data]
                    CheddarGetter::Client.post(path, :body => options[:data], :basic_auth => { 
                                                 :username => self.username, 

@@ -10,20 +10,19 @@ module CheddarGetter
       "transactions" => "transaction"
     }
     
-    attr_accessor :raw_response, :clean_response, :response_type
+    attr_accessor :raw_response, :clean_response
     
     def initialize(response)
       self.raw_response = response
-      self.clean_response = fix_keys(response.parsed_response)
-      self.response_type = self.clean_response.keys.first
+      self.clean_response = response.parsed_response.is_a?(Hash) ? fix_keys(response.parsed_response) : { }
     end
     
     def valid?
-      !self['error']
+      !self['error'] && raw_response.code == 200
     end
     
     def error_message
-      self['error']
+      self['error'] || raw_response.code
     end
     
     def plans
@@ -63,7 +62,7 @@ module CheddarGetter
     end
     
     def customer_invoice(code = nil)
-      retrieve_item(customer_subscription(code), 'invoices')
+      ((customer_subscription(code) || { })['invoices'] || []).first
     end
     
     def customer_invoices(code = nil)
