@@ -684,5 +684,151 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal 15, result.customer_item_quantity_overage("TEST_ITEM_1")
     assert_equal 37.5, result.customer_item_quantity_overage_cost("TEST_ITEM_1")
   end
+    
+  should "create charges against a customer" do
+    
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.add_charge }
+    
+    result = CG.add_charge(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.add_charge(:id => "not_a_valid_id")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.add_charge(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal "A value is required: chargeCode", result.error_message
+    
+    result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE" })
+    assert_equal false, result.valid?
+    assert_equal "A value is required: quantity", result.error_message
+    
+    result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE", :quantity => 1 })
+    assert_equal false, result.valid?
+    assert_equal "A value is required: eachAmount", result.error_message
+    
+    result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE", :quantity => 1, :eachAmount => 2 })
+    assert_equal true, result.valid?
+    charge = result.customer_invoice[:charges].detect{ |c| c[:code] == "MY_CHARGE" }
+    assert_equal 1, charge[:quantity]
+    assert_equal 2, charge[:eachAmount]
+    assert_equal nil, charge[:description]
+    
+    result = CG.add_charge({:code => 1}, 
+                           { :chargeCode => "MY_CREDIT", :quantity => 1, 
+                             :eachAmount => -2, :description => "Whoops" })
+    assert_equal true, result.valid?
+    charge = result.customer_invoice[:charges].detect{ |c| c[:code] == "MY_CREDIT" }
+    assert_equal 1, charge[:quantity]
+    assert_equal -2, charge[:eachAmount]
+    assert_equal "Whoops", charge[:description]
+    
+  end
+
+  should "resubscribe after canceling" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.cancel_subscription(:code => result.customer[:code])
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    result = CG.edit_subscription({ :code => result.customer[:code] }, paid_new_user_hash(1)[:subscription])
+    assert_equal true, result.valid?
+    assert_equal false, result.customer_canceled?
+    assert_equal 2, result.customer_subscriptions.count
+    assert_equal "Test Plan 2", result.customer_plan[:name]
+  end
+    
+  should "test customer get filtering" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(2))
+    assert_equal true, result.valid?
+    result = CG.cancel_subscription(:code => 2)
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    
+    result = CG.new_customer(paid_new_user_hash(3))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(4))
+    assert_equal true, result.valid?
+    result = CG.cancel_subscription(:code => 4)
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    result = CG.get_customers
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    assert_equal "1", result.customer(1)[:code]
+    assert_equal "2", result.customer(2)[:code]
+    assert_equal "3", result.customer(3)[:code]
+    assert_equal "4", result.customer(4)[:code]
+    
+    result = CG.get_customers(:subscriptionStatus => "activeOnly")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    assert_equal "1", result.customer(1)[:code]
+    assert_equal nil, result.customer(2)
+    assert_equal "3", result.customer(3)[:code]
+    assert_equal nil, result.customer(4)
+    
+    result = CG.get_customers(:subscriptionStatus => "canceledOnly")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    assert_equal nil, result.customer(1)
+    assert_equal "2", result.customer(2)[:code]
+    assert_equal nil, result.customer(3)
+    assert_equal "4", result.customer(4)[:code]
+    
+    result = CG.get_customers(:planCode => "TEST_PLAN_1")
+    assert_equal false, result.valid?
+    assert_equal "No customers found.", result.error_message
+    
+    result = CG.get_customers(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    
+    result = CG.get_customers(:planCode => "FREE_PLAN_TEST")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    
+    result = CG.get_customers(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
+    assert_equal true, result.valid?
+    assert_equal 1, result.customers.count
+    
+    result = CG.get_customers(:canceledAfterDate => Date.today)
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    
+    result = CG.get_customers(:createdAfterDate => Date.today)
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    
+    result = CG.get_customers(:search => "First")
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    
+    result = CG.get_customers(:search => "NotFirst")
+    assert_equal false, result.valid?
+    assert_equal "No customers found.", result.error_message
+  end
   
 end

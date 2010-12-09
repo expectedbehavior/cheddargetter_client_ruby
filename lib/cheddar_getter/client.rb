@@ -260,7 +260,7 @@ module CheddarGetter
     #  :description => not_required
     #}
     def add_charge(id_hash = { }, data = { })
-      do_request(:item => :customers, :action => "add_charge", :id_hash => id_hash, :data => data)
+      do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
     
     private

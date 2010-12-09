@@ -49,7 +49,7 @@ module CheddarGetter
     end
     
     def valid?
-      !self.error
+      !self.error && self.raw_response.code < 400
     end
     
     def error_message
