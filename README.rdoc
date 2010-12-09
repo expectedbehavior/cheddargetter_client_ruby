@@ -1,19 +1,68 @@
-= cheddargetter_client_ruby
+= Cheddar Getter API Client for Ruby
 
-Description goes here.
+This is a Ruby wrapper for the CheddarGetter[http://cheddargetter.com] API.  
+It allows you to interface with the Cheddar Getter API using simple calls, i.e.:
 
-== Contributing to cheddargetter_client_ruby
- 
-* Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet
-* Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it
-* Fork the project
-* Start a feature/bugfix branch
-* Commit and push until you are happy with your contribution
-* Make sure to add tests for it. This is important so I don't break it in a future version unintentionally.
-* Please try not to mess with the Rakefile, version, or history. If you want to have your own version, or is otherwise necessary, that is fine, but please isolate to its own commit so I can cherry-pick around it.
+    client = CheddarGetter::Client.new(:product_code => "YOUR_PRODUCT_CODE",
+                                       :username => "your.username@example.com",
+                                       :password => "your.password")
+
+    client.new_customer(
+      :code      => 'EXAMPLE_CUSTOMER',
+      :firstName => 'Example',
+      :lastName  => 'Customer',
+      :email     => 'example_customer@example.com',
+      :subscription => {
+        :planCode     => 'THE_PLAN_CODE',
+        :ccFirstName  => 'Example',
+        :ccLastName'  => 'Customer',
+        :ccNumber'    => '4111111111111111',
+        :ccExpiration => '04/2011',
+        :ccZip'       => '90210'
+      }
+    )
+
+See the `example` directory for more usage examples. 
+It is modeled directly after cheddargetter-client-php[https://github.com/marcguyer/cheddargetter-client-php], the official PHP library, with a number of ruby-isms to make life easier.
+
+
+== Installation
+
+This library should be installed as a gem.  It is hosted on Gemcutter[http://gemcutter.org].
+
+If you don't have your system set up to use gemcutter, follow the instructions on their site, i.e.:
+
+    $ gem install gemcutter
+    $ gem tumble
+
+This will install Gemcutter and set your gem sources to search the gemcutter repos.
+
+Then you can install this library as a gem:
+
+    $ gem install cheddargetter_client_ruby
+
+
+=== Requirements
+
+This library requires HTTParty version 0.4.3 or greater.
+
+    $ gem install httparty
+
+
+=== Usage
+
+Simply require this library before you use it:
+
+    require 'cheddargetter_client_ruby'
+    
+
+If you're using Rails, you could include this gem in your configuration, i.e. in `environment.rb`
+
+    config.gem 'cheddargetter_client_ruby'
+
+Check out the example[https://github.com/expectedbehavior/cheddargetter_client_ruby/tree/master/example] to see usage details.  You can also check out the Cheddar Getter API documention[http://cheddargetter.com/developers].
 
 == Copyright
 
-Copyright (c) 2010 Michael Kuehl. See LICENSE.txt for
-further details.
+Copyright (c) 2010 Expected Behavior. See LICENSE.txt for further details.
 
