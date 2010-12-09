@@ -5,6 +5,14 @@ module CheddarGetter
     base_uri "https://cheddargetter.com/"
     attr_accessor :product_code, :product_id, :username, :password
     
+    #options:
+    #
+    #{
+    #  :username     => required, your CheddarGetter username
+    #  :password     => required, your CheddarGetter password
+    #  :product_id   => this or product_code is required
+    #  :product_code => this or product_id is required
+    #}
     def initialize(options = { })
       self.product_code = options[:product_code]
       self.product_id   = options[:product_id]
@@ -24,21 +32,25 @@ module CheddarGetter
     end
 
     #https://cheddargetter.com/developers#single-plan
+    #
     #id_hash: {:code => plan_code} OR {:id => plan_id}
     def get_plan(id_hash = { })
       do_request(:item => :plans, :action => :get, :id_hash => id_hash)
     end
 
     #https://cheddargetter.com/developers#all-customers
-    #any, all, or none of this data hash can be given.
-    #it just filters the returned customers
+    #
+    #Any, all, or none of this data hash can be given.
+    #It just filters the returned customers
+    #
     #data:
+    #
     #{
-    #  :subscriptionStatus =>	"activeOnly" or "canceledOnly",
-    #  :planCode           => plan_code,
+    #  :subscriptionStatus => "activeOnly" or "canceledOnly",
+    #  :planCode           => plan_code, #can take an array of plan codes
     #  :createdAfterDate	 => date,
-    #  :createdBeforeDate	 => date,
-    #  :canceledAfterDate	 => date,
+    #  :createdBeforeDate  => date,
+    #  :canceledAfterDate  => date,
     #  :canceledBeforeDate =>	date,
     #  :orderBy	           =>	"name" (default), "company", "plan", "billingDatetime" or "createdDatetime"
     #  :orderByDirection   =>	"asc" (default) or "desc"
@@ -49,13 +61,16 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#single-customer
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
     def get_customer(id_hash = { })
       do_request(:item => :customers, :action => :get, :id_hash => id_hash)
     end
     
     #https://cheddargetter.com/developers#add-customer
+    #
     #data:
+    #
     #{ 
     #  :code                 => required,
     #  :firstName            => required,
@@ -110,8 +125,11 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#update-customer-subscription
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #
     #data:
+    #
     #{ 
     #  :firstName            => not_required,
     #  :lastName             => not_required,
@@ -151,8 +169,11 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#update-customer
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #
     #data:
+    #
     #{ 
     #  :firstName            => not_required,
     #  :lastName             => not_required,
@@ -168,6 +189,7 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#delete-customer
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
     def delete_customer(id_hash = { })
       do_request(:item => :customers, :action => :delete, :id_hash => id_hash)
@@ -179,8 +201,11 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#update-subscription
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #
     #data:
+    #
     #{
     #  :planCode        => not_required,
     #  :changeBillDate  => not_required,
@@ -201,20 +226,25 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#cancel-subscription
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
     def cancel_subscription(id_hash = { })
       do_request(:item => :customers, :action => :cancel, :id_hash => id_hash)
     end
     
     #https://cheddargetter.com/developers#add-item-quantity
+    #
     #id_hash: 
+    #
     #{
     #  :code => Either code or id are required (this is the customer code)
     #  :id => Either code or id are required (this is the customer id)
     #  :item_code => Either item code or item id are required
     #  :item_id => Either item code or item id are required
     #}
+    #
     #data: (not required)
+    #
     #{ :quantity => treated_as_1_if_not_set }
     def add_item_quantity(id_hash = { }, data = { })
       do_request(:item => :customers, :action => "add-item-quantity", :id_hash => id_hash, 
@@ -222,14 +252,18 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#remove-item-quantity
+    #
     #id_hash: 
+    #
     #{
     #  :code => Either code or id are required (this is the customer code)
     #  :id => Either code or id are required (this is the customer id)
     #  :item_code => Either item code or item id are required
     #  :item_id => Either item code or item id are required
     #}
+    #
     #data: (not required)
+    #
     #{ :quantity => treated_as_1_if_not_set }
     def remove_item_quantity(id_hash = { }, data = { })
       do_request(:item => :customers, :action => "remove-item-quantity", :id_hash => id_hash, 
@@ -237,13 +271,16 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#set-item-quantity
+    #
     #id_hash: 
+    #
     #{
     #  :code => Either code or id are required (this is the customer code)
     #  :id => Either code or id are required (this is the customer id)
     #  :item_code => Either item code or item id are required
     #  :item_id => Either item code or item id are required
     #}
+    #
     #data: { :quantity => required }
     def set_item_quantity(id_hash = { }, data = { })
       do_request(:item => :customers, :action => "set-item-quantity", :id_hash => id_hash, 
@@ -251,8 +288,11 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#add-charge
+    #
     #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #
     #data:
+    #
     #{
     #  :chargeCode  => required,
     #  :quantity    => required,

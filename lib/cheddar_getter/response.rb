@@ -37,7 +37,7 @@ module CheddarGetter
     
     attr_accessor :raw_response, :clean_response
     
-    def initialize(response)
+    def initialize(response)    #:nodoc:
       self.raw_response = response
       create_clean_response
     end
@@ -48,10 +48,12 @@ module CheddarGetter
       end
     end
     
+    #true if the response from CheddarGetter was valid
     def valid?
       !self.error && self.raw_response.code < 400
     end
     
+    #the error message (if there was one) if the CheddarGetter response was invalid
     def error_message
       e = self.error
       msg = nil
@@ -62,58 +64,105 @@ module CheddarGetter
       msg
     end
     
+    #Returns the given plan.
+    #
+    #code must be provided if this response contains more than one plan.
     def plan(code = nil)
       retrieve_item(self, :plans, code)
     end
     
+    #Returns the items for the given plan.
+    #
+    #code must be provided if this response contains more than one plan.
     def plan_items(code = nil)
       (plan(code) || { })[:items]
     end
     
+    #Returns the given item for the given plan.
+    #
+    #item_code must be provided if the plan has more than one item.
+    #
+    #code must be provided if this response contains more than one plan.
     def plan_item(item_code = nil, code = nil)
       retrieve_item(plan(code), :items, item_code)
     end
     
+    #Returns the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer(code = nil)
       retrieve_item(self, :customers, code)
     end
     
+    #Returns the current subscription for the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_subscription(code = nil)
       #current subscription is always the first one
       (customer_subscriptions(code) || []).first
     end
     
+    #Returns all the subscriptions for the given customer.  
+    #Only the first one is active, the rest is historical.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_subscriptions(code = nil)
       (customer(code) || { })[:subscriptions]
     end
     
+    #Returns the current plan for the given customer
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_plan(code = nil)
       ((customer_subscription(code) || { })[:plans] || []).first
     end
     
+    #Returns the current open invoice for the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_invoice(code = nil)
       #current invoice is always the first one
       ((customer_subscription(code) || { })[:invoices] || []).first
     end
     
+    #Returns all of the invoices for the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_invoices(code = nil)
       (customer_subscriptions(code) || []).map{ |s| s[:invoices] || [] }.flatten
     end
     
+    #Returns the last billed invoice for the given customer.
+    #This is not the same as the currect active invoice.
+    #
+    #nil if there is no last billed invoice.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_last_billed_invoice(code = nil)
       #last billed invoice is always the second one
       (customer_invoices(code) || [])[1]
     end
     
+    #Returns all of the transactions for the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_transactions(code = nil)
       customer_invoices(code).map{ |s| s[:transactions] || [] }.flatten
     end
     
+    #Returns the last transaction for the given customer.
+    #
+    #nil if there are no transactions.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_last_transaction(code = nil)
       invoice = customer_last_billed_invoice(code) || { }
       (invoice[:transactions] || []).first
     end
     
+    #Returns an array of any currently outstanding invoices for the given customer.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_outstanding_invoices(code = nil)
       now = DateTime.now
       customer_invoices(code).reject do |i| 
@@ -121,6 +170,12 @@ module CheddarGetter
       end
     end
     
+    #Info about the given item for the given customer.  
+    #Merges the plan item info with the subscription item info.
+    #
+    #item_code must be provided if the customer is on a plan with more than one item.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_item(item_code = nil, code = nil)
       sub = customer_subscription(code)
       return nil unless sub
@@ -132,17 +187,32 @@ module CheddarGetter
       item
     end
     
+    #The amount remaining for a given item for a given customer.
+    #
+    #item_code must be provided if the customer is on a plan with more than one item.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_item_quantity_remaining(item_code = nil, code = nil)
       item = customer_item(item_code, code)
       item ? item[:quantityIncluded] - item[:quantity] : 0
     end
     
+    #The overage amount for the given item for the given customer.  0 if they are still under their limit.
+    #
+    #item_code must be provided if the customer is on a plan with more than one item.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_item_quantity_overage(item_code = nil, code = nil)
       over = -customer_item_quantity_remaining(item_code, code)
       over = 0 if over <= 0
       over
     end
     
+    #The current overage cost for the given item for the given customer.
+    #
+    #item_code must be provided if the customer is on a plan with more than one item.
+    #
+    #code must be provided if this response contains more than one customer.
     def customer_item_quantity_overage_cost(item_code = nil, code = nil)
       item = customer_item(item_code, code)
       return 0 unless item
@@ -150,11 +220,16 @@ module CheddarGetter
       item[:overageAmount] * overage
     end
     
+    #true if the customer is canceled
+    #
+    #code must be provided if this reponse contains more than one customer
     def customer_canceled?(code = nil)
       sub = customer_subscription(code)
       sub ? !!sub[:canceledDatetime] : nil
     end
     
+    #access the root keys of the response directly, such as 
+    #:customers, :plans, or :error
     def [](value)
       self.clean_response[value]
     end
