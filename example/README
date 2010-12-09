@@ -1,0 +1,9 @@
+The example script requires modification to work for your purposes.  
+
+The username, password and productCode must be customized.
+
+The script makes use of two different pricing plans:
+	* A free plan with code=FREE
+	* A paid plan with code=PREMIUM
+
+You must either create these pricing plans in the CG admin GUI or substitute your own plan codes
