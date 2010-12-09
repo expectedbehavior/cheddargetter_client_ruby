@@ -30,8 +30,22 @@ module CheddarGetter
     end
 
     #https://cheddargetter.com/developers#all-customers
-    def get_customers
-      do_request(:item => :customers, :action => :get)
+    #any, all, or none of this data hash can be given.
+    #it just filters the returned customers
+    #data:
+    #{
+    #  :subscriptionStatus =>	"activeOnly" or "canceledOnly",
+    #  :planCode           => plan_code,
+    #  :createdAfterDate	 => date,
+    #  :createdBeforeDate	 => date,
+    #  :canceledAfterDate	 => date,
+    #  :canceledBeforeDate =>	date,
+    #  :orderBy	           =>	"name" (default), "company", "plan", "billingDatetime" or "createdDatetime"
+    #  :orderByDirection   =>	"asc" (default) or "desc"
+    #  :search             =>	Tcustomer name, company, email address and last four digits of credit card.
+    #}
+    def get_customers(data = nil)
+      do_request(:item => :customers, :action => :get, :data => data)
     end
     
     #https://cheddargetter.com/developers#single-customer
@@ -239,9 +253,7 @@ module CheddarGetter
     
     def do_request(options)
       data = options[:data]
-      if data && data[:subscription] && data[:subscription][:ccExpiration].respond_to?(:strftime)
-        data[:subscription][:ccExpiration] = data[:subscription][:ccExpiration].strftime("%m/%Y")
-      end
+      deep_fix_request_data!(data)
       
       path = "/xml/#{options[:item]}/#{options[:action]}"
       path += get_identifier_string(options[:id_hash]) if options[:id_hash]
@@ -267,6 +279,38 @@ module CheddarGetter
       
       CheddarGetter::Response.new(response)
     end
+    
+    FIX_UP_KEYS = { 
+      :ccExpiration => :month_year,
+      :isVatExempt => :boolean,
+      :initialBillDate => :year_month_day,
+      :createdAfterDate => :year_month_day,
+      :createdBeforeDate => :year_month_day,
+      :canceledAfterDate => :year_month_day,
+      :canceledBeforeDate => :year_month_day
+    }
+    
+    def deep_fix_request_data!(data)
+      if data.is_a?(Array)
+        data.each do |v|
+          deep_fix_request_data!(v) 
+        end
+      elsif data.is_a?(Hash)
+        data.each do |k, v|
+          deep_fix_request_data!(v)
+          type = FIX_UP_KEYS[k]
+          if type
+            data[k] = case type
+                        when :month_year then v.respond_to?(:strftime) ? v.strftime("%m/%Y") : v
+                        when :boolean then v ? "1" : "0"
+                        when :year_month_day then v.respond_to?(:strftime) ? v.strftime("%Y/%m/%d") : v
+                        else v
+                        end
+          end
+        end
+      end
+    end
+    
   end
 end
 

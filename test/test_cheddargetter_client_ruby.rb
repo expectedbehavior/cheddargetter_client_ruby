@@ -485,6 +485,89 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "11361", result.customer_subscription[:ccZip]
     assert_equal "Test Plan 2", result.customer_plan[:name]
   end
-
+    
+  should "edit customer only" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.edit_customer_only }
+    
+    result = CG.edit_customer_only(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.edit_customer_only(:id => "not_a_valid_id")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    customer = result.customer
+    assert_equal true, result.valid?
+    
+    result = CG.edit_customer_only(:code => customer[:code])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_customer_only(:id => customer[:id])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_customer({:code => customer[:code]}, {
+                                :firstName => "New", 
+                                :company => "EB"})
+    assert_equal true, result.valid?
+    assert_equal "New", result.customer[:firstName]
+    assert_equal "EB", result.customer[:company]
+    
+    #make them eqiv again, so we can do a full eqiv check
+    result.customer[:firstName] = customer[:firstName]
+    result.customer[:company] = customer[:company]
+    result.customer[:modifiedDatetime] = customer[:modifiedDatetime]
+    result.customer[:subscriptions][0][:invoices][0][:vatRate] = nil #not sure why this changes from nil to 0
+    assert_equal customer, result.customer
+  end
+  
+  should "edit subscription only" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.edit_subscription }
+    
+    result = CG.edit_subscription(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.edit_subscription(:id => "not_a_valid_id")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    customer = result.customer
+    assert_equal true, result.valid?
+    
+    result = CG.edit_subscription(:code => customer[:code])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_subscription(:id => customer[:id])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_subscription({:code => customer[:code]}, { :ccZip => "46268" })
+    assert_equal true, result.valid?
+    assert_equal "46268", result.customer_subscription[:ccZip]
+    
+    #make them eqiv again, so we can do a full eqiv check
+    result.customer[:subscriptions][0][:ccZip] = customer[:subscriptions][0][:ccZip] 
+    result.customer[:subscriptions][0][:invoices][0][:vatRate] = nil #not sure why this changes from nil to 0
+    result.customer[:modifiedDatetime] = customer[:modifiedDatetime]
+    assert_equal customer, result.customer
+    
+    result = CG.edit_subscription({:code => customer[:code]}, paid_new_user_hash(1)[:subscription] )
+    assert_equal true, result.valid?
+    assert_equal 2, result.customer_subscriptions.count
+    assert_equal "11361", result.customer_subscription[:ccZip]
+    assert_equal "Test Plan 2", result.customer_plan[:name]
+  end
   
 end
