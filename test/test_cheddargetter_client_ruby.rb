@@ -569,5 +569,120 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "11361", result.customer_subscription[:ccZip]
     assert_equal "Test Plan 2", result.customer_plan[:name]
   end
+    
+  should "test item quantity calls" do
+    
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.add_item_quantity }
+    assert_raises(CheddarGetter::ClientException){ CG.remove_item_quantity }
+    assert_raises(CheddarGetter::ClientException){ CG.set_item_quantity }
+    
+    #check that both are required
+    assert_raises(CheddarGetter::ClientException){ CG.add_item_quantity(:code => 1) }
+    assert_raises(CheddarGetter::ClientException){ CG.remove_item_quantity(:code => 1) }
+    assert_raises(CheddarGetter::ClientException){ CG.set_item_quantity(:code => 1) }    
+    assert_raises(CheddarGetter::ClientException){ CG.add_item_quantity(:item_code => 1) }
+    assert_raises(CheddarGetter::ClientException){ CG.remove_item_quantity(:item_code => 1) }
+    assert_raises(CheddarGetter::ClientException){ CG.set_item_quantity(:item_code => 1) }
+    
+    result = CG.add_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.add_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.remove_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.remove_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.set_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.set_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    assert_equal 0, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 10, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.add_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.add_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.remove_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.remove_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.set_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.set_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
+    assert_equal false, result.valid?
+    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    
+    result = CG.add_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
+    assert_equal true, result.valid?
+    assert_equal 1, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 9, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.add_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 4 })
+    assert_equal true, result.valid?
+    assert_equal 5, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 5, result.customer_item_quantity_remaining("TEST_ITEM_2")
+  
+    result = CG.remove_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"})
+    assert_equal true, result.valid?
+    assert_equal 4, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 6, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.remove_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 4 })
+    assert_equal true, result.valid?
+    assert_equal 0, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 10, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"})
+    assert_equal false, result.valid?
+    assert_equal "A value is required: quantity", result.error_message
+    
+    result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 6 })
+    assert_equal true, result.valid?
+    assert_equal 6, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 4, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 0 })
+    assert_equal true, result.valid?
+    assert_equal 0, result.customer_item("TEST_ITEM_2")[:quantity]
+    assert_equal 10, result.customer_item_quantity_remaining("TEST_ITEM_2")
+    
+    result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 15 })
+    assert_equal false, result.valid?
+    assert_equal "'15' is not less than or equal to '10': quantity", result.error_message
+    
+    result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_1"}, { :quantity => 15 })
+    assert_equal 15, result.customer_item("TEST_ITEM_1")[:quantity]
+    assert_equal -15, result.customer_item_quantity_remaining("TEST_ITEM_1")
+    assert_equal 15, result.customer_item_quantity_overage("TEST_ITEM_1")
+    assert_equal 37.5, result.customer_item_quantity_overage_cost("TEST_ITEM_1")
+  end
   
 end

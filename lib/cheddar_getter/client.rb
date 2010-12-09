@@ -207,24 +207,47 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#add-item-quantity
-    #id_hash: {:code => customer_code} OR {:id => customer_id}
-    #data: { :quantity => treated_as_1_if_not_set }
+    #id_hash: 
+    #{
+    #  :code => Either code or id are required (this is the customer code)
+    #  :id => Either code or id are required (this is the customer id)
+    #  :item_code => Either item code or item id are required
+    #  :item_id => Either item code or item id are required
+    #}
+    #data: (not required)
+    #{ :quantity => treated_as_1_if_not_set }
     def add_item_quantity(id_hash = { }, data = { })
-      do_request(:item => :customers, :action => "add-item-quantity", :id_hash => id_hash, :data => data)
+      do_request(:item => :customers, :action => "add-item-quantity", :id_hash => id_hash, 
+                 :data => data, :add_item_id => true)
     end
     
     #https://cheddargetter.com/developers#remove-item-quantity
-    #id_hash: {:code => customer_code} OR {:id => customer_id}
-    #data: { :quantity => treated_as_1_if_not_set }
+    #id_hash: 
+    #{
+    #  :code => Either code or id are required (this is the customer code)
+    #  :id => Either code or id are required (this is the customer id)
+    #  :item_code => Either item code or item id are required
+    #  :item_id => Either item code or item id are required
+    #}
+    #data: (not required)
+    #{ :quantity => treated_as_1_if_not_set }
     def remove_item_quantity(id_hash = { }, data = { })
-      do_request(:item => :customers, :action => "remove-item-quantity", :id_hash => id_hash, :data => data)
+      do_request(:item => :customers, :action => "remove-item-quantity", :id_hash => id_hash, 
+                 :data => data, :add_item_id => true)
     end
     
     #https://cheddargetter.com/developers#set-item-quantity
-    #id_hash: {:code => customer_code} OR {:id => customer_id}
+    #id_hash: 
+    #{
+    #  :code => Either code or id are required (this is the customer code)
+    #  :id => Either code or id are required (this is the customer id)
+    #  :item_code => Either item code or item id are required
+    #  :item_id => Either item code or item id are required
+    #}
     #data: { :quantity => required }
     def set_item_quantity(id_hash = { }, data = { })
-      do_request(:item => :customers, :action => "set-item-quantity", :id_hash => id_hash, :data => data)
+      do_request(:item => :customers, :action => "set-item-quantity", :id_hash => id_hash, 
+                 :data => data, :add_item_id => true)
     end
     
     #https://cheddargetter.com/developers#add-charge
@@ -241,13 +264,18 @@ module CheddarGetter
     end
     
     private
-    def get_identifier_string(id_hash)
-      if id_hash[:code]
-        "/code/#{CGI.escape(id_hash[:code].to_s)}"
-      elsif id_hash[:id]
-        "/id/#{CGI.escape(id_hash[:id].to_s)}"
+    def get_identifier_string(type, id_hash)
+      code = type ? "#{type}_code".to_sym : :code
+      id = type ? "#{type}_id".to_sym : :id
+      
+      if id_hash[code]
+        str = type ? "#{type}Code" : "code"
+        "/#{str}/#{CGI.escape(id_hash[code].to_s)}"
+      elsif id_hash[id]
+        str = type ? "#{type}Id" : "id"
+        "/#{str}/#{CGI.escape(id_hash[id].to_s)}"
       else
-        raise CheddarGetter::ClientException.new("Either :code or :id is required")
+        raise CheddarGetter::ClientException.new("Either a :#{code} or :#{id} is required")
       end
     end
     
@@ -256,7 +284,8 @@ module CheddarGetter
       deep_fix_request_data!(data)
       
       path = "/xml/#{options[:item]}/#{options[:action]}"
-      path += get_identifier_string(options[:id_hash]) if options[:id_hash]
+      path += get_identifier_string(nil, options[:id_hash]) if options[:id_hash]
+      path += get_identifier_string("item", options[:id_hash]) if options[:add_item_id]
       path += if product_code
                 "/productCode/#{CGI.escape(product_code.to_s)}"
               elsif product_id
