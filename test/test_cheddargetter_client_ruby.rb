@@ -379,5 +379,112 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal false, result.valid?
     assert_equal "Customer not found", result.error_message
   end
+    
+  should "delete a customer from cheddargetter" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.delete_customer }
+    
+    customer = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, customer.valid?
+    
+    result = CG.delete_customer(:code => customer.customer[:code])
+    assert_equal true, result.valid?
+    
+    result = CG.delete_customer(:code => customer.customer[:code])
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.delete_customer(:id => customer.customer[:id])
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    customer = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, customer.valid?
+    
+    result = CG.delete_customer(:id => customer.customer[:id])
+    assert_equal true, result.valid?
+    
+    result = CG.delete_customer(:code => customer.customer[:code])
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.delete_customer(:id => customer.customer[:id])
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+  end
+    
+  should "cancel a subscription" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.cancel_subscription }
+    
+    customer = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, customer.valid?
+    assert_equal false, customer.customer_canceled?
+    
+    result = CG.cancel_subscription(:code => customer.customer[:code])
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    customer = CG.new_customer(paid_new_user_hash(2))
+    assert_equal true, customer.valid?
+    assert_equal false, customer.customer_canceled?
+    
+    result = CG.cancel_subscription(:id => customer.customer[:id])
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+  end
+  
+  should "edit customer and subscription" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.edit_customer }
+    
+    result = CG.edit_customer(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.edit_customer(:id => "not_a_valid_id")
+    assert_equal false, result.valid?
+    assert_equal "Customer not found", result.error_message
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    customer = result.customer
+    assert_equal true, result.valid?
+    
+    result = CG.edit_customer(:code => customer[:code])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_customer(:id => customer[:id])
+    assert_equal true, result.valid?
+    assert_equal customer, result.customer
+    
+    result = CG.edit_customer({:code => customer[:code]}, {:firstName => "New", 
+                                :subscription => { :ccZip => "46268" }})
+    assert_equal true, result.valid?
+    assert_equal "New", result.customer[:firstName]
+    assert_equal "46268", result.customer_subscription[:ccZip]
+    
+    #make them eqiv again, so we can do a full eqiv check
+    result.customer[:firstName] = customer[:firstName]
+    result.customer[:subscriptions][0][:ccZip] = customer[:subscriptions][0][:ccZip] 
+    result.customer[:subscriptions][0][:invoices][0][:vatRate] = nil #not sure why this changes from nil to 0
+    result.customer[:modifiedDatetime] = customer[:modifiedDatetime]
+    assert_equal customer, result.customer
+    
+    result = CG.edit_customer({:code => customer[:code]},
+                              { :company => "EB", :subscription => paid_new_user_hash(1)[:subscription] })
+    assert_equal true, result.valid?
+    assert_equal "EB", result.customer[:company]
+    assert_equal 2, result.customer_subscriptions.count
+    assert_equal "11361", result.customer_subscription[:ccZip]
+    assert_equal "Test Plan 2", result.customer_plan[:name]
+  end
+
   
 end

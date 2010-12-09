@@ -31,7 +31,8 @@ module CheddarGetter
       :eachAmount => :float,
       :number => :integer,
       :amount => :float,
-      :transactedDatetime => :datetime
+      :transactedDatetime => :datetime,
+      :vatRate => :float
     }
     
     attr_accessor :raw_response, :clean_response
@@ -147,6 +148,11 @@ module CheddarGetter
       return 0 unless item
       overage = customer_item_quantity_overage(item_code, code)
       item[:overageAmount] * overage
+    end
+    
+    def customer_canceled?(code = nil)
+      sub = customer_subscription(code)
+      sub ? !!sub[:canceledDatetime] : nil
     end
     
     def [](value)
