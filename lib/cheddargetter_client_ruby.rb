@@ -1,5 +1,5 @@
 require 'httparty'
-require 'CGI'
+require 'CGI' unless Object.const_defined?("CGI")
 
 module CheddarGetter
   autoload :Client, "cheddar_getter/client"

@@ -1,4 +1,4 @@
-require 'helper'
+require File.join(File.dirname(__FILE__), 'helper')
 
 class TestCheddargetterClientRuby < Test::Unit::TestCase
   ERROR_CODES = { 
@@ -51,7 +51,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
       },
     }
   end
-  
+
   should "check various client init exceptions" do
     assert_raises(CheddarGetter::ClientException) do
       CheddarGetter::Client.new(:product_code => "code", :password => "password")
@@ -829,6 +829,24 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     result = CG.get_customers(:search => "NotFirst")
     assert_equal false, result.valid?
     assert_equal "No customers found.", result.error_message
+  end
+  
+  should "get 100% code coverage :)" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    data = { :test => "string" }
+
+    CheddarGetter::Client::FIX_UP_KEYS[:test] = :nope
+    CG.send(:deep_fix_request_data!, data)
+    assert_equal "string", data[:test]
+    CheddarGetter::Client::FIX_UP_KEYS.delete(:test)
+    
+    CheddarGetter::Response::KEY_TO_DATA_TYPE[:test] = :nope
+    response = CG.get_customers
+    response.send(:deep_fix_data_types!, data)
+    assert_equal "string", data[:test]
+    CheddarGetter::Response::KEY_TO_DATA_TYPE.delete(:test)
   end
   
 end
