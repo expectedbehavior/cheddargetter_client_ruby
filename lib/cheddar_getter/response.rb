@@ -7,7 +7,8 @@ module CheddarGetter
       :customers => :customer,
       :invoices => :invoice,
       :charges => :charge,
-      :transactions => :transaction
+      :transactions => :transaction,
+      :errors => :error
     }
     
     KEY_TO_DATA_TYPE = { 
@@ -42,7 +43,7 @@ module CheddarGetter
       create_clean_response
     end
     
-    [:error, :plans, :customers].each do |key|
+    [:errors, :plans, :customers].each do |key|
       define_method key.to_s do
         self[key]
       end
@@ -50,18 +51,19 @@ module CheddarGetter
     
     #true if the response from CheddarGetter was valid
     def valid?
-      !self.error && self.raw_response.code < 400
+      self.errors.size == 0 && self.raw_response.code < 400
     end
     
-    #the error message (if there was one) if the CheddarGetter response was invalid
-    def error_message
-      e = self.error
-      msg = nil
-      if e
-        msg = e[:text]
-        msg += ": #{e[:fieldName]}" unless e[:fieldName].blank?
+    #the error messages (if there were any) if the CheddarGetter response was invalid
+    def error_messages
+      self.errors.map do |e|
+        msg = nil
+        if e
+          msg = e[:text]
+          msg += ": #{e[:fieldName]}" unless e[:fieldName].blank?
+        end
+        msg
       end
-      msg
     end
     
     #Returns the given plan.
@@ -288,9 +290,24 @@ module CheddarGetter
       end
     end
     
+    def reduce_clean_errors!(data)
+      root_plural    = [(data.delete(:errors) || { })[:error]].flatten
+      root_singular  = [data.delete(:error)]
+      embed_singluar = []
+      embed_plural   = []
+      embed = data[:customers] || data[:plans]
+      if embed
+        embed_singluar = [(embed.delete(:errors) || { })[:error]].flatten
+        embed_plural   = [embed.delete(:error)]
+      end
+      new_errors = (root_plural + root_singular + embed_plural + embed_singluar).compact
+      data[:errors] = new_errors
+    end
+    
     def create_clean_response
       data = self.raw_response.parsed_response.is_a?(Hash) ? self.raw_response.parsed_response : { }
       deep_symbolize_keys!(data)
+      reduce_clean_errors!(data)
       deep_fix_array_keys!(data)
       deep_fix_data_types!(data)
       self.clean_response = data
@@ -300,16 +317,19 @@ module CheddarGetter
         data = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
                                                             '<error\1><text>\2</text></error>'))
         deep_symbolize_keys!(data)
+        reduce_clean_errors!(data)
         deep_fix_array_keys!(data)
         deep_fix_data_types!(data)
         self.clean_response = data
-        
-        aux_code = (self.error[:auxCode] || "")
-        if aux_code[":"]
-          split_aux_code = aux_code.split(':')
-          self.error[:fieldName] = split_aux_code.first
-          self.error[:errorType] = split_aux_code.last
+        self.errors.each do |e|
+          aux_code = (e[:auxCode] || "")
+          if aux_code[":"]
+            split_aux_code = aux_code.split(':')
+            e[:fieldName] = split_aux_code.first
+            e[:errorType] = split_aux_code.last
+          end          
         end
+
       end
       
     end

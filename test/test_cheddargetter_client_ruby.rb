@@ -51,7 +51,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
       },
     }
   end
-
+  
   should "check various client init exceptions" do
     assert_raises(CheddarGetter::ClientException) do
       CheddarGetter::Client.new(:product_code => "code", :password => "password")
@@ -75,24 +75,25 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = cg.get_plans
     assert_equal false, result.valid?
-    assert_equal "Authentication required", result.error_message
+    assert_equal ["Authentication required"], result.error_messages
     
     cg.username = CG.username
     cg.password = CG.password
     result = cg.get_plans
     assert_equal false, result.valid?
-    assert_equal "User michael@expectedbehavior.com does not have access to productCode=code", result.error_message
+    assert_equal ["User michael@expectedbehavior.com does not have access to productCode=code"], 
+      result.error_messages
     
     cg.product_code = ""
     result = cg.get_plans
     assert_equal false, result.valid?
-    assert_equal "No product selected. Need a productId or productCode.", result.error_message
+    assert_equal ["No product selected. Need a productId or productCode."], result.error_messages
     
     cg.product_code = nil
     cg.product_id = "id"
     result = cg.get_plans
     assert_equal false, result.valid?
-    assert_equal "User does not have access to productId=id", result.error_message
+    assert_equal ["User does not have access to productId=id"], result.error_messages
   end
   
   should "get 3 plans from cheddar getter" do
@@ -136,7 +137,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.get_plan(:code => "NOT_A_PLAN")
     assert_equal false, result.valid?
-    assert_equal "Plan not found for code=NOT_A_PLAN within productCode=GEM_TEST", result.error_message
+    assert_equal ["Plan not found for code=NOT_A_PLAN within productCode=GEM_TEST"], result.error_messages
   end
   
   should "create a single free customer at cheddar getter" do
@@ -166,74 +167,74 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     data[:subscription].delete(:ccCardCode)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccCardCode]", result.error_message
+    assert_equal ["A value is required: subscription[ccCardCode]"], result.error_messages
     
     data[:subscription][:ccExpiration] = "00/0000"
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal("'00/0000' is not a valid date in format MM/YYYY: subscription[ccExpiration]", 
-                 result.error_message)
+    assert_equal(["'00/0000' is not a valid date in format MM/YYYY: subscription[ccExpiration]"], 
+                 result.error_messages)
     
     data[:subscription].delete(:ccExpiration)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccExpiration]", result.error_message
+    assert_equal ["A value is required: subscription[ccExpiration]"], result.error_messages
     
     data[:subscription][:ccNumber] = "1"
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal("'1' is not from an allowed institute: subscription[ccNumber]", 
-                 result.error_message)
+    assert_equal(["'1' is not from an allowed institute: subscription[ccNumber]"], 
+                 result.error_messages)
     
     data[:subscription].delete(:ccNumber)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccNumber]", result.error_message
+    assert_equal ["A value is required: subscription[ccNumber]"], result.error_messages
     
     data[:subscription].delete(:ccZip)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccZip]", result.error_message
+    assert_equal ["A value is required: subscription[ccZip]"], result.error_messages
     
     data[:subscription].delete(:ccLastName)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccLastName]", result.error_message
+    assert_equal ["A value is required: subscription[ccLastName]"], result.error_messages
     
     data[:subscription].delete(:ccFirstName)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: subscription[ccFirstName]", result.error_message
+    assert_equal ["A value is required: subscription[ccFirstName]"], result.error_messages
     
     data.delete(:email)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: email", result.error_message
+    assert_equal ["A value is required: email"], result.error_messages
     
     data.delete(:code)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: code", result.error_message
+    assert_equal ["A value is required: code"], result.error_messages
     
     data.delete(:lastName)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: lastName", result.error_message
+    assert_equal ["A value is required: lastName"], result.error_messages
     
     data.delete(:firstName)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A value is required: firstName", result.error_message
+    assert_equal ["A value is required: firstName"], result.error_messages
     
     data[:subscription][:planCode] = "NOT_A_PLAN"
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "No plan found with code=NOT_A_PLAN", result.error_message
+    assert_equal ["No plan found with code=NOT_A_PLAN"], result.error_messages
 
     data[:subscription].delete(:planCode)
     result = CG.new_customer(data)
     assert_equal false, result.valid?
-    assert_equal "A pricing plan is required", result.error_message
+    assert_equal ["A pricing plan is required"], result.error_messages
   end
   
   should "try to create a customer with direct forced card errors" do
@@ -243,7 +244,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     ERROR_CODES.each do |k, v|
       result = CG.new_customer(paid_new_user_hash(1, "0#{k}"))
       assert_equal false, result.valid?
-      assert_equal v, result.error_message
+      assert_equal [v], result.error_messages
     end
 
   end
@@ -257,7 +258,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.new_customer(paid_new_user_hash(1))
     assert_equal false, result.valid?
-    assert_equal "Another customer already exists with code=1: code", result.error_message
+    assert_equal ["Another customer already exists with code=1: code"], result.error_messages
   end
   
   should "get customers from cheddargetter" do
@@ -340,7 +341,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_raises(CheddarGetter::ClientException){ CG.get_customer }
     result = CG.get_customer(:code => 6)
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
 
     result = CG.get_customer(:code => 5)
     assert_equal true, result.valid?
@@ -377,7 +378,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
         
     result = CG.get_customer(:id => "bad_id")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
   end
     
   should "delete a customer from cheddargetter" do
@@ -394,11 +395,11 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.delete_customer(:code => customer.customer[:code])
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.delete_customer(:id => customer.customer[:id])
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     customer = CG.new_customer(paid_new_user_hash(1))
     assert_equal true, customer.valid?
@@ -408,11 +409,11 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.delete_customer(:code => customer.customer[:code])
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.delete_customer(:id => customer.customer[:id])
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
   end
     
   should "cancel a subscription" do
@@ -446,11 +447,11 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.edit_customer(:code => 1)
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.edit_customer(:id => "not_a_valid_id")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.new_customer(free_new_user_hash(1))
     customer = result.customer
@@ -494,11 +495,11 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.edit_customer_only(:code => 1)
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.edit_customer_only(:id => "not_a_valid_id")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.new_customer(free_new_user_hash(1))
     customer = result.customer
@@ -535,11 +536,11 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.edit_subscription(:code => 1)
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.edit_subscription(:id => "not_a_valid_id")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.new_customer(free_new_user_hash(1))
     customer = result.customer
@@ -589,27 +590,27 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.add_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.add_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.remove_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.remove_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.set_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.set_item_quantity(:id => "not_a_valid_id", :item_code => "TEST_ITEM_2")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.new_customer(paid_new_user_hash(1))
     assert_equal true, result.valid?
@@ -618,27 +619,27 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.add_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (code=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.add_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (id=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.remove_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (code=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.remove_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (id=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.set_item_quantity(:code => 1, :item_code => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (code=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (code=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.set_item_quantity(:code => 1, :item_id => "NOT_AN_ITEM")
     assert_equal false, result.valid?
-    assert_equal "Item not found (id=NOT_AN_ITEM)", result.error_message
+    assert_equal ["Item not found (id=NOT_AN_ITEM)"], result.error_messages
     
     result = CG.add_item_quantity(:code => 1, :item_code => "TEST_ITEM_2")
     assert_equal true, result.valid?
@@ -662,7 +663,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"})
     assert_equal false, result.valid?
-    assert_equal "A value is required: quantity", result.error_message
+    assert_equal ["A value is required: quantity"], result.error_messages
     
     result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 6 })
     assert_equal true, result.valid?
@@ -676,7 +677,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_2"}, { :quantity => 15 })
     assert_equal false, result.valid?
-    assert_equal "'15' is not less than or equal to '10': quantity", result.error_message
+    assert_equal ["'15' is not less than or equal to '10': quantity"], result.error_messages
     
     result = CG.set_item_quantity({:code => 1, :item_code => "TEST_ITEM_1"}, { :quantity => 15 })
     assert_equal 15, result.customer_item("TEST_ITEM_1")[:quantity]
@@ -694,26 +695,26 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.add_charge(:code => 1)
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.add_charge(:id => "not_a_valid_id")
     assert_equal false, result.valid?
-    assert_equal "Customer not found", result.error_message
+    assert_equal ["Customer not found"], result.error_messages
     
     result = CG.new_customer(paid_new_user_hash(1))
     assert_equal true, result.valid?
     
     result = CG.add_charge(:code => 1)
     assert_equal false, result.valid?
-    assert_equal "A value is required: chargeCode", result.error_message
+    assert_equal ["A value is required: chargeCode"], result.error_messages
     
     result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE" })
     assert_equal false, result.valid?
-    assert_equal "A value is required: quantity", result.error_message
+    assert_equal ["A value is required: quantity"], result.error_messages
     
     result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE", :quantity => 1 })
     assert_equal false, result.valid?
-    assert_equal "A value is required: eachAmount", result.error_message
+    assert_equal ["A value is required: eachAmount"], result.error_messages
     
     result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE", :quantity => 1, :eachAmount => 2 })
     assert_equal true, result.valid?
@@ -750,7 +751,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal 2, result.customer_subscriptions.count
     assert_equal "Test Plan 2", result.customer_plan[:name]
   end
-    
+
   should "test customer get filtering" do
     result = CG.delete_all_customers
     assert_equal true, result.valid?
@@ -800,7 +801,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.get_customers(:planCode => "TEST_PLAN_1")
     assert_equal false, result.valid?
-    assert_equal "No customers found.", result.error_message
+    assert_equal ["No customers found."], result.error_messages
     
     result = CG.get_customers(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
     assert_equal true, result.valid?
@@ -828,7 +829,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.get_customers(:search => "NotFirst")
     assert_equal false, result.valid?
-    assert_equal "No customers found.", result.error_message
+    assert_equal ["No customers found."], result.error_messages
   end
   
   should "get 100% code coverage :)" do
@@ -847,6 +848,21 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     response.send(:deep_fix_data_types!, data)
     assert_equal "string", data[:test]
     CheddarGetter::Response::KEY_TO_DATA_TYPE.delete(:test)
+  end
+    
+  should "test embedded errors" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    new_sub = paid_new_user_hash(1, "05003")[:subscription]
+    new_sub[:planCode] = "TEST_PLAN_1"
+    
+    result = CG.edit_subscription({:code => 1}, new_sub)
+    assert_equal false, result.valid?
+    assert_equal ["Credit card type is not accepted"], result.error_messages
   end
   
 end
