@@ -18,7 +18,7 @@ response = client.delete_all_customers
 if response.valid?
   puts "\tDeleted old customers"
 else
-  puts "\tERROR: #{response.error_message}"
+  puts "\tERROR: #{response.error_messages.inspect}"
 end
 	
 puts ""
@@ -41,7 +41,7 @@ response = client.new_customer(data)
 if response.valid?
   puts "\tCreated Milton Waddams with code=MILTON_WADDAMS"
 else
-  puts "\tERROR: #{response.error_message}"
+  puts "\tERROR: #{response.error_messages.inspect}"
 end
 	
 puts ""
@@ -70,7 +70,7 @@ response = client.new_customer(data)
 if response.valid?
   puts "\tCreated Bill Lumberg with code=BILL_LUMBERG. (This should not have happened)"
 else
-  puts "\tExpect Error: #{response.error_message}"
+  puts "\tExpect Error: #{response.error_messages.inspect}"
 end
 
 puts ""
@@ -100,7 +100,7 @@ response = client.new_customer(data)
 if response.valid?
   puts "\tCreated Bill Lumberg with code=BILL_LUMBERG"
 else
-  puts "\tERROR: #{response.error_message}"
+  puts "\tERROR: #{response.error_messages.inspect}"
 end
 	
 #get lumberg and display current details
@@ -118,5 +118,5 @@ if response.valid?
     puts "\t\t(#{charge[:quantity]}) #{charge[:code]} $#{charge[:eachAmount]*charge[:quantity]}"
   end
 else
-  puts "\tERROR: #{response.error_message}"
+  puts "\tERROR: #{response.error_messages.inspect}"
 end	
