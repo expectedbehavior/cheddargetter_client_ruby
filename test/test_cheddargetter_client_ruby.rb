@@ -291,7 +291,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_raises(CheddarGetter::ResponseException){ result.plan_items }
     assert_raises(CheddarGetter::ResponseException){ result.plan_item }
     
-    assert_equal "Test Plan 2", result.customer_subscription(1)[:plans][0][:name]
+    assert_equal "Test Plan 2", result.customer_subscription(1)[:plan][:name]
     assert_equal 1, result.customer_subscriptions(1).count
     assert_equal "TEST_PLAN_2_RECURRING", result.customer_invoice(1)[:charges][0][:code]
     assert_equal 1, result.customer_invoices(1).count
@@ -348,7 +348,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "5", result.customer(5)[:code]
     assert_equal "5", result.customer[:code]
     
-    assert_equal "Test Plan 2", result.customer_subscription[:plans][0][:name]
+    assert_equal "Test Plan 2", result.customer_subscription[:plan][:name]
     assert_equal 1, result.customer_subscriptions.count
     assert_equal "Test Plan 2", result.customer_plan[:name]
     assert_equal "TEST_PLAN_2_RECURRING", result.customer_invoice[:charges][0][:code]
@@ -848,6 +848,14 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     response.send(:deep_fix_data_types!, data)
     assert_equal "string", data[:test]
     CheddarGetter::Response::KEY_TO_DATA_TYPE.delete(:test)
+    
+    assert_raises(CheddarGetter::ResponseException){
+      response.send(:make_plan_in_subscription_singular!, 
+                    {:customers => [:subscriptions => [:plans => []]]})}
+    
+    assert_raises(CheddarGetter::ResponseException){
+      response.send(:make_plan_in_subscription_singular!, 
+                    {:customers => [:subscriptions => [:plans => [1,2]]]})}
   end
     
   should "test embedded errors" do

@@ -11,6 +11,11 @@ module CheddarGetter
       :errors => :error
     }
     
+    #not charges, because codes aren't unique
+    #not invoices, transactions, subscriptions, or errors because they don't have codes
+    ARRAY_TO_HASH_BY_CODE = 
+      [:plans, :items, :customers]
+    
     KEY_TO_DATA_TYPE = { 
       :isActive => :boolean,
       :isFree => :boolean,
@@ -116,7 +121,7 @@ module CheddarGetter
     #
     #code must be provided if this response contains more than one customer.
     def customer_plan(code = nil)
-      ((customer_subscription(code) || { })[:plans] || []).first
+      (customer_subscription(code) || { })[:plan]
     end
     
     #Returns the current open invoice for the given customer.
@@ -179,10 +184,8 @@ module CheddarGetter
     #
     #code must be provided if this response contains more than one customer.
     def customer_item(item_code = nil, code = nil)
-      sub = customer_subscription(code)
-      return nil unless sub
-      sub_item = retrieve_item(sub, :items, item_code)
-      plan_item = retrieve_item(retrieve_item(sub, :plans), :items, item_code)
+      sub_item  = retrieve_item(customer_subscription(code), :items, item_code)
+      plan_item = retrieve_item(customer_plan(code),         :items, item_code)
       return nil unless sub_item && plan_item
       item = plan_item.dup
       item[:quantity] = sub_item[:quantity]
@@ -231,11 +234,10 @@ module CheddarGetter
     end
     
     #access the root keys of the response directly, such as 
-    #:customers, :plans, or :error
+    #:customers, :plans, or :errors
     def [](value)
       self.clean_response[value]
     end
-    
     
     private
     def deep_fix_array_keys!(data)
@@ -290,60 +292,93 @@ module CheddarGetter
       end
     end
     
+    def make_plan_in_subscription_singular!(data)
+      return unless data[:customers]
+      data[:customers].each do |c|
+        c[:subscriptions].each do |s|
+          if s[:plans].size != 1
+            raise CheddarGetter::ResponseException.new("Should be exactly one plan in a subscription!")
+          end
+          s[:plan] = s[:plans].first
+          s.delete(:plans)
+        end
+      end
+    end
+    
+    def switch_arrays_to_hashes!(data)
+      if data.is_a?(Array)
+        data.each do |v|
+          switch_arrays_to_hashes!(v) 
+        end
+      elsif data.is_a?(Hash)
+        data.each do |k, v|
+          switch_arrays_to_hashes!(v)
+          if ARRAY_TO_HASH_BY_CODE.include?(k) && v.is_a?(Array)
+            new_hash = { }
+            v.each do |item|
+              new_hash[item[:code]] = item
+            end
+            data[k] = new_hash
+          end
+        end
+      end
+    end
+    
     def reduce_clean_errors!(data)
       root_plural    = [(data.delete(:errors) || { })[:error]].flatten
       root_singular  = [data.delete(:error)]
       embed_singluar = []
       embed_plural   = []
+      
       embed = data[:customers] || data[:plans]
       if embed
         embed_singluar = [(embed.delete(:errors) || { })[:error]].flatten
         embed_plural   = [embed.delete(:error)]
       end
+      
       new_errors = (root_plural + root_singular + embed_plural + embed_singluar).compact
+
+      new_errors.each do |e|
+        aux_code = (e[:auxCode] || "")
+        if aux_code[":"]
+          split_aux_code = aux_code.split(':')
+          e[:fieldName] = split_aux_code.first
+          e[:errorType] = split_aux_code.last
+        end          
+      end
+      
       data[:errors] = new_errors
     end
     
     def create_clean_response
-      data = self.raw_response.parsed_response.is_a?(Hash) ? self.raw_response.parsed_response : { }
+      data = { }
+      
+      #if it isn't a hash, then we didn't get anything useful back.
+      if self.raw_response.parsed_response.is_a?(Hash)
+        #because Crack can:t get attributes and text at the same time.  
+        #so we fix the error blocks and re-parse
+        data = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
+                                                            '<error\1><text>\2</text></error>'))
+      end
+      
       deep_symbolize_keys!(data)
       reduce_clean_errors!(data)
       deep_fix_array_keys!(data)
       deep_fix_data_types!(data)
+      make_plan_in_subscription_singular!(data)
+      switch_arrays_to_hashes!(data)
       self.clean_response = data
-      
-      #because Crack can:t get attributes and text at the same time.  grrrr
-      unless self.valid?
-        data = Crack::XML.parse(self.raw_response.body.gsub(/<error(.*)>(.*)<\/error>/, 
-                                                            '<error\1><text>\2</text></error>'))
-        deep_symbolize_keys!(data)
-        reduce_clean_errors!(data)
-        deep_fix_array_keys!(data)
-        deep_fix_data_types!(data)
-        self.clean_response = data
-        self.errors.each do |e|
-          aux_code = (e[:auxCode] || "")
-          if aux_code[":"]
-            split_aux_code = aux_code.split(':')
-            e[:fieldName] = split_aux_code.first
-            e[:errorType] = split_aux_code.last
-          end          
-        end
-
-      end
-      
     end
     
-    def retrieve_item(hash, type, code = nil)
-      array = hash[type]
-      if !array
+    def retrieve_item(root, type, code = nil)
+      hash = root[type]
+      if !hash
         raise CheddarGetter::ResponseException.new(
-          "Can:t get #{type} from a response that doesn:t contain #{type}")
+          "Can:t get #{type} from a response that doesn't contain #{type}")
       elsif code
-        code = code.to_s
-        array.detect{ |p| p[:code].to_s == code }
-      elsif array.size <= 1
-        array.first
+        hash[code.to_s]
+      elsif hash.size <= 1
+        hash.first.last
       else
         raise CheddarGetter::ResponseException.new(
           "This response contains multiple #{type} so you need to provide the code for the one you wish to get")
