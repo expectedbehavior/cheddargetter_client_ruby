@@ -62,7 +62,9 @@ If you're using Rails, you could include this gem in your configuration, i.e. in
 
 Check out the example[https://github.com/expectedbehavior/cheddargetter_client_ruby/tree/master/example] to see usage details.  You can also check out the Cheddar Getter API documention[http://cheddargetter.com/developers].
 
+
+
 == Copyright
 
-Copyright (c) 2010 Expected Behavior. See LICENSE.txt for further details.
+Copyright (c) 2011 Expected Behavior. See LICENSE.txt for further details.
 
