@@ -124,7 +124,7 @@ module CheddarGetter
     #Pass in the cookie info hash if you have been using the 
     #set_marketing_cookie method to track marketing metrics.
     #Info from the marketing cookie will be passed along to 
-    #CheddarGetter in the new_customer call.
+    #Cheddar Getter in the new_customer call.
     #
     #cookie_info (optional):
     #
@@ -323,16 +323,16 @@ module CheddarGetter
       do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
     
-    # http://support.cheddargetter.com/faqs/marketing-metrics/marketing-metrics
+    #http://support.cheddargetter.com/faqs/marketing-metrics/marketing-metrics
     #
-    # Convenience wrapper of setcookie() for setting a persistent cookie 
-    # containing marketing metrics compatible with CheddarGetter's marketing metrics tracking.
-	  # Running this method on every request to your marketing site sets or refines the marketing 
-    # cookie data over time.
-    # If you are using this method, you can pass in the cookies to the new_customer call, 
-    # which will automatically add the data to the customer record.  
+    #Convenience wrapper of setcookie() for setting a persistent cookie 
+    #containing marketing metrics compatible with CheddarGetter's marketing metrics tracking.
+	  #Running this method on every request to your marketing site sets or refines the marketing 
+    #cookie data over time.
+    #If you are using this method, you can pass in the cookies to the new_customer call, 
+    #which will automatically add the data to the customer record.  
     #
-    # Sample usage for your controller:
+    #Sample usage for your controller:
     # 
     #  before_filter :update_cheddar_getter_cookie
     #  def update_cheddar_getter_cookie
