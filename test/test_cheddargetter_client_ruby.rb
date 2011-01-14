@@ -40,6 +40,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
       :firstName            => "First",
       :lastName             => "Last",
       :email                => "email@example.com",
+      :firstContactDatetime => Time.now,
       :subscription => { 
         :planCode        => "TEST_PLAN_2",
         :ccNumber        => "4111111111111111",
@@ -871,6 +872,111 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     result = CG.edit_subscription({:code => 1}, new_sub)
     assert_equal false, result.valid?
     assert_equal ["Credit card type is not accepted"], result.error_messages
+  end
+  
+  should "test setting the marketing cookie" do 
+    cn = CheddarGetter::Client::DEFAULT_COOKIE_NAME
+    fake_request_class = Struct.new(:env, :params)
+    assert_raises(CheddarGetter::ClientException) { CheddarGetter::Client.set_marketing_cookie }
+    assert_raises(CheddarGetter::ClientException) { CheddarGetter::Client.set_marketing_cookie(:cookies => { }) }
+    
+    request = fake_request_class.new({'HTTP_REFERER' => 'woot'}, { :utm_term => 'hi' })
+    time = Time.now
+    cookies = { "__utma" => " . .#{time.to_i}. . . "}
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+
+    assert_equal '/', cookies[cn][:path]
+    assert_equal nil, cookies[cn][:domain]
+    assert_equal false, cookies[cn][:secure]
+    assert_equal false, cookies[cn][:httponly]
+    cookie_data = YAML.load(cookies[cn][:value])
+    assert_equal 3, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    assert_equal "hi", cookie_data[:campaignTerm]
+    
+    cookies[cn] = cookies[cn][:value]
+    cookies['__utmz'] = " . . . .utmgclid=value|utmctr=bye"
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn]) #was not manipulated
+    assert_equal 3, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    assert_equal "hi", cookie_data[:campaignTerm]
+    
+    cookie_data.delete(:campaignTerm)
+    cookies[cn] = cookie_data.to_yaml
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn][:value])
+    assert_equal 5, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    assert_equal "bye", cookie_data[:campaignTerm]
+    assert_equal "google", cookie_data[:campaignSource]
+    assert_equal "ppc", cookie_data[:campaignMedium]
+    
+    cookie_data.delete(:campaignTerm)
+    cookie_data.delete(:campaignSource)
+    cookie_data.delete(:campaignMedium)
+    cookies['__utmz'] = " . . . ."
+    cookies[cn] = cookie_data.to_yaml
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn]) #was not manipulated
+    assert_equal 2, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    
+    cookies['__utmz'] = " . . . .utmgclid=value"
+    cookies[cn] = cookie_data.to_yaml
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn][:value])
+    assert_equal 4, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    assert_equal "google", cookie_data[:campaignSource]
+    assert_equal "ppc", cookie_data[:campaignMedium]
+    
+    cookie_data.delete(:campaignTerm)
+    cookie_data.delete(:campaignSource)
+    cookie_data.delete(:campaignMedium)
+    cookies['__utmz'] = " . . . . "
+    cookies[cn] = cookie_data.to_yaml
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn][:value])
+    assert_equal 2, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    
+    cookies[cn] = "stuff"
+    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    cookie_data = YAML.load(cookies[cn][:value])
+    assert_equal 3, cookie_data.size
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), cookie_data[:firstContactDatetime]
+    assert_equal "woot", cookie_data[:referer]
+    assert_equal "hi", cookie_data[:campaignTerm]    
+  end
+  
+  should "create a customer with marketing data" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    time = Time.now
+    
+    cookies = { CheddarGetter::Client::DEFAULT_COOKIE_NAME => ({ 
+        :firstContactDatetime => time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        :referer => 'direct',
+        :campaignTerm => "incorrect"
+      }.to_yaml) }
+  
+    result = CG.new_customer({ :campaignTerm => "correct"}.merge(free_new_user_hash(1)),
+                             { :cookies => cookies })
+    assert_equal 1, result.customers.size
+    assert_equal "1", result.customer[:code]
+    assert_equal "Free Plan Test", result.customer_plan[:name]
+    assert_equal time.strftime("%Y-%m-%dT%H:%M:%S%z"), 
+      result.customer[:firstContactDatetime].strftime("%Y-%m-%dT%H:%M:%S%z")
+    assert_equal 'direct', result.customer[:referer]
+    assert_equal 'correct', result.customer[:campaignTerm]
   end
   
 end

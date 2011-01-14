@@ -171,7 +171,7 @@ module CheddarGetter
     #
     #code must be provided if this response contains more than one customer.
     def customer_outstanding_invoices(code = nil)
-      now = DateTime.now
+      now = Time.now
       customer_invoices(code).reject do |i| 
         i[:paidTransactionId] || i[:billingDatetime] > now
       end
@@ -282,7 +282,7 @@ module CheddarGetter
             data[k] = case type
                         when :integer then v.to_i
                         when :float then v.to_f
-                        when :datetime then DateTime.parse(v) rescue v
+                        when :datetime then Time.parse(v) rescue v
                         when :date then Date.parse(v) rescue v
                         when :boolean then v.to_i != 0
                         else v

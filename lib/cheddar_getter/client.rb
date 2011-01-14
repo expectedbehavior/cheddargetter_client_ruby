@@ -120,7 +120,27 @@ module CheddarGetter
     #    }
     #  }
     #}
-    def new_customer(data = { })
+    #
+    #Pass in the cookie info hash if you have been using the 
+    #set_marketing_cookie method to track marketing metrics.
+    #Info from the marketing cookie will be passed along to 
+    #CheddarGetter in the new_customer call.
+    #
+    #cookie_info (optional):
+    #
+    #{
+    #  :cookies => required
+    #  :cookie_name => not_required
+    #}
+    def new_customer(data = { }, cookie_info = nil)
+      if cookie_info
+        cookie_name = cookie_info[:cookie_name] || DEFAULT_COOKIE_NAME
+        cookie_data = (YAML.load(cookie_info[:cookies][cookie_name] || "") rescue nil) || { }
+        [:firstContactDatetime, :referer, :campaignTerm, :campaignName, 
+         :campaignSource, :campaignMedium, :campaignContent].each do |key|
+          data[key] ||= cookie_data[key] if cookie_data[key]
+        end
+      end
       do_request(:item => :customers, :action => :new, :data => data)
     end
     
@@ -303,6 +323,138 @@ module CheddarGetter
       do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
     
+    # http://support.cheddargetter.com/faqs/marketing-metrics/marketing-metrics
+    #
+    # Convenience wrapper of setcookie() for setting a persistent cookie 
+    # containing marketing metrics compatible with CheddarGetter's marketing metrics tracking.
+	  # Running this method on every request to your marketing site sets or refines the marketing 
+    # cookie data over time.
+    # If you are using this method, you can pass in the cookies to the new_customer call, 
+    # which will automatically add the data to the customer record.  
+    #
+    # Sample usage for your controller:
+    # 
+    #  before_filter :update_cheddar_getter_cookie
+    #  def update_cheddar_getter_cookie
+    #    CheddarGetter::Client.set_marketing_cookie(:cookies => cookies, :request => request)
+    #  end
+    #
+    #options:
+    #
+    #{
+    #  :cookies     => required,
+    #  :request     => required,
+    #  :cookie_name => not_required (default 'CGMK'),
+    #  :expires     => not_required (default 2 years),
+    #  :path        => not_required (default '/'),
+    #  :domain      => not_required (default nil),
+    #  :secure      => not_required (default false),
+    #  :httponly    => not_required (default false)
+    #}
+    def self.set_marketing_cookie(options = { })
+      default_options = { 
+        :cookie_name => DEFAULT_COOKIE_NAME,
+        :expires => Time.now + 60*60*24*365*2,
+        :path => '/',
+        :domain => nil,
+        :secure => false,
+        :httponly => false
+      }
+      
+      options = default_options.merge(options)
+      cookies = options[:cookies]
+      raise CheddarGetter::ClientException.new("The option :cookies is required") unless cookies
+      request = options[:request]
+      raise CheddarGetter::ClientException.new("The option :request is required") unless request
+      
+      utm_params = { 
+        :utm_term     => :campaignTerm, 
+        :utm_campaign => :campaignName, 
+        :utm_source   => :campaignSource, 
+        :utm_medium   => :campaignMedium, 
+        :utm_content  => :campaignContent 
+      }
+      
+      # get the existing cookie information, if any
+      cookie_data = (YAML.load(cookies[options[:cookie_name]] || "") rescue nil)
+      cookie_data = nil unless cookie_data.kind_of?(Hash)
+
+      # no cookie yet -- set the first contact date and referer in the cookie
+      # (only first request)
+      if !cookie_data
+        # when did this lead first find us? (right now!)
+        # we'll use this to determine the customer "vintage"
+        cookie_data = { :firstContactDatetime => Time.now.strftime("%Y-%m-%dT%H:%M:%S%z") }
+
+        # if there's a __utma cookie, we can get a more accurate time
+        # which helps us get better data from visitors who first found us
+        # before we started setting our own cookie
+        if cookies['__utma']
+          domain_hash, visitor_id, initial_visit, previous_visit, current_visit, visit_counter =
+            cookies['__utma'].split('.')
+        
+          initial_visit = initial_visit.to_i
+          if initial_visit != 0
+            cookie_data[:firstContactDatetime] = Time.at(initial_visit).strftime("%Y-%m-%dT%H:%M:%S%z") 
+          end
+        end
+
+        #set the raw referer (defaults to 'direct')
+        cookie_data[:referer] = 'direct'
+        cookie_data[:referer] = request.env['HTTP_REFERER'] unless request.env['HTTP_REFERER'].blank?
+
+        # if there's some utm vars
+        # When tagging your inbound links for google analytics 
+        #   http://www.google.com/support/analytics/bin/answer.py?answer=55518
+        # our cookie will also benenfit by the added params
+        utm_params.each { |k, v| cookie_data[v] = request.params[k] unless request.params[k].blank? }
+        
+        cookies[options[:cookie_name]] = { 
+          :value => cookie_data.to_yaml,
+          :path => options[:path],
+          :domain => options[:domain],
+          :expires => options[:expires],
+          :secure => options[:secure],
+          :httponly => options[:httponly]
+        }
+
+      # cookie is already set but maybe we can refine it with __utmz data
+		  # (second and subsequent requests)
+      elsif cookies['__utmz']
+        return if cookie_data.size >= 3 #already has enough info
+
+        domain_hash, timestamp, session_number, campaign_number, campaign_data =
+          cookies['__utmz'].split('.')
+
+        return if campaign_data.blank?
+        campaign_data = (Hash[*campaign_data.split(/\||=/)] rescue { })
+
+        # see if it's a google adwords lead 
+        # in this case, we only get the keyword
+        if ! campaign_data["utmgclid"].blank? 
+          cookie_data[:campaignSource] = 'google';
+          cookie_data[:campaignMedium] = 'ppc';
+          cookie_data[:campaignTerm]   = campaign_data["utmctr"] unless campaign_data["utmctr"].blank?
+        else
+          cookieData[:campaignSource]  = campaign_data["utmcsr"] unless campaign_data["utmcsr"].blank?
+          cookieData[:campaignName]    = campaign_data["utmccn"] unless campaign_data["utmccn"].blank?
+          cookieData[:campaignMedium]  = campaign_data["utmcmd"] unless campaign_data["utmcmd"].blank?
+          cookieData[:campaignTerm]    = campaign_data["utmctr"] unless campaign_data["utmctr"].blank?
+          cookieData[:campaignContent] = campaign_data["utmcct"] unless campaign_data["utmcct"].blank?
+        end
+        
+        cookies[options[:cookie_name]] = { 
+          :value => cookie_data.to_yaml,
+          :path => options[:path],
+          :domain => options[:domain],
+          :expires => options[:expires],
+          :secure => options[:secure],
+          :httponly => options[:httponly]
+        }
+      end
+    end
+    
+    
     private
     def get_identifier_string(type, id_hash)
       code = type ? "#{type}_code".to_sym : :code
@@ -356,8 +508,12 @@ module CheddarGetter
       :createdAfterDate => :year_month_day,
       :createdBeforeDate => :year_month_day,
       :canceledAfterDate => :year_month_day,
-      :canceledBeforeDate => :year_month_day
+      :canceledBeforeDate => :year_month_day,
+      :firstContactDatetime => :datetime,
+      :changeBillDate => :datetime
     }
+    
+    DEFAULT_COOKIE_NAME = 'CGMK'
     
     def deep_fix_request_data!(data)
       if data.is_a?(Array)
@@ -372,7 +528,8 @@ module CheddarGetter
             data[k] = case type
                         when :month_year then v.respond_to?(:strftime) ? v.strftime("%m/%Y") : v
                         when :boolean then v ? "1" : "0"
-                        when :year_month_day then v.respond_to?(:strftime) ? v.strftime("%Y/%m/%d") : v
+                        when :year_month_day then v.respond_to?(:strftime) ? v.strftime("%Y-%m-%d") : v
+                        when :datetime then v.respond_to?(:strftime) ? v.strftime("%Y-%m-%dT%H:%M:%S%z") : v
                         else v
                         end
           end
