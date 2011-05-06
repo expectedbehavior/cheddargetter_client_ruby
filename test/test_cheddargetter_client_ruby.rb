@@ -562,14 +562,20 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     
     result = CG.new_customer(free_new_user_hash(1))
     customer = result.customer
+    result.customer[:subscriptions].first[:plan].delete(:initialInvoiceBillingDatetime)
+    result.customer[:subscriptions].first[:plan].delete(:nextInvoiceBillingDatetime)    
     assert_equal true, result.valid?
     
     result = CG.edit_subscription(:code => customer[:code])
     assert_equal true, result.valid?
+    result.customer[:subscriptions].first[:plan].delete(:initialInvoiceBillingDatetime)
+    result.customer[:subscriptions].first[:plan].delete(:nextInvoiceBillingDatetime)        
     assert_equal customer, result.customer
     
     result = CG.edit_subscription(:id => customer[:id])
     assert_equal true, result.valid?
+    result.customer[:subscriptions].first[:plan].delete(:initialInvoiceBillingDatetime)
+    result.customer[:subscriptions].first[:plan].delete(:nextInvoiceBillingDatetime)        
     assert_equal customer, result.customer
     
     result = CG.edit_subscription({:code => customer[:code]}, { :ccZip => "46268" })
@@ -580,6 +586,8 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     result.customer[:subscriptions][0][:ccZip] = customer[:subscriptions][0][:ccZip] 
     result.customer[:subscriptions][0][:invoices][0][:vatRate] = nil #not sure why this changes from nil to 0
     result.customer[:modifiedDatetime] = customer[:modifiedDatetime]
+    result.customer[:subscriptions].first[:plan].delete(:initialInvoiceBillingDatetime)
+    result.customer[:subscriptions].first[:plan].delete(:nextInvoiceBillingDatetime)        
     assert_equal customer, result.customer
     
     result = CG.edit_subscription({:code => customer[:code]}, paid_new_user_hash(1)[:subscription] )
