@@ -426,18 +426,22 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     customer = CG.new_customer(paid_new_user_hash(1))
     assert_equal true, customer.valid?
     assert_equal false, customer.customer_canceled?
+    assert_equal true, customer.customer_active?
     
     result = CG.cancel_subscription(:code => customer.customer[:code])
     assert_equal true, result.valid?
     assert_equal true, result.customer_canceled?
+    assert_equal false, result.customer_active?
     
     customer = CG.new_customer(paid_new_user_hash(2))
     assert_equal true, customer.valid?
     assert_equal false, customer.customer_canceled?
+    assert_equal true, customer.customer_active?
     
     result = CG.cancel_subscription(:id => customer.customer[:id])
     assert_equal true, result.valid?
     assert_equal true, result.customer_canceled?
+    assert_equal false, result.customer_active?    
   end
   
   should "edit customer and subscription" do

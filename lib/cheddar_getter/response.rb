@@ -233,6 +233,19 @@ module CheddarGetter
       sub ? !!sub[:canceledDatetime] : nil
     end
     
+    # Get an array representation of a single customer's current subscription
+    # @throws CheddarGetter_Response_Exception if the response type is incompatible or if a $code 
+    # is not provided and the response contains more than one customer
+    # @return array
+    def customer_active?(code = nil)
+      subscription = customer_subscription(code)
+      if subscription[:canceledDatetime] && subscription[:canceledDatetime] <= Time.now
+        false
+      else
+        true
+      end
+    end
+    
     #access the root keys of the response directly, such as 
     #:customers, :plans, or :errors
     def [](value)
