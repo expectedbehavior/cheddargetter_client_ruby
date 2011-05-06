@@ -131,14 +131,14 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_raises(CheddarGetter::ResponseException){ result.customer }
     assert_equal true, result.valid?
     
-    result = CG.get_plan(:id => "fe96b9e6-53a2-102e-b098-40402145ee8b")
+    result = CG.get_plan(:id => "a6a816c8-6d14-11e0-bcd4-40406799fa1e")
     assert_equal 1, result.plans.size
     assert_equal "Free Plan Test", result.plan("FREE_PLAN_TEST")[:name]
     assert_equal true, result.valid?
     
     result = CG.get_plan(:code => "NOT_A_PLAN")
     assert_equal false, result.valid?
-    assert_equal ["Plan not found for code=NOT_A_PLAN within productCode=GEM_TEST"], result.error_messages
+    assert_equal ["Plan not found for code=NOT_A_PLAN within productCode=RUBYGEM"], result.error_messages
   end
   
   should "create a single free customer at cheddar getter" do
