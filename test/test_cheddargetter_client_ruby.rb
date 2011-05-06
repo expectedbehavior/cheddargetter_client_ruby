@@ -82,7 +82,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     cg.password = CG.password
     result = cg.get_plans
     assert_equal false, result.valid?
-    assert_equal ["User michael@expectedbehavior.com does not have access to productCode=code"], 
+    assert_equal ["User #{CGEmail} does not have access to productCode=code"], 
       result.error_messages
     
     cg.product_code = ""

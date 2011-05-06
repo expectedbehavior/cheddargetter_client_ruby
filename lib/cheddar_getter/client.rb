@@ -2,7 +2,7 @@ module CheddarGetter
   class Client
     include HTTParty
     
-    base_uri "https://cheddargetter.com/"
+    base_uri "http://testing.cheddargetter.com/"
     attr_accessor :product_code, :product_id, :username, :password
     
     #options:
