@@ -332,6 +332,28 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_raises(CheddarGetter::ResponseException){ result.customer_item_quantity_overage_cost }
   end
   
+  should "get customer list from cheddargetter" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(2))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(3))
+    assert_equal true, result.valid?
+    
+    result = CG.get_customer_list
+    assert_equal true, result.valid?
+    assert_equal 3, result.customers.count
+    assert_equal "1", result.customer(1)[:code]
+    assert_equal "2", result.customer(2)[:code]
+    assert_equal "3", result.customer(3)[:code]
+    assert_equal nil, result.customer(4)
+  end
+  
   should "get a customer from cheddargetter" do
     result = CG.delete_all_customers
     assert_equal true, result.valid?
@@ -880,6 +902,87 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal 4, result.customers.count
     
     result = CG.get_customers(:search => "NotFirst")
+    assert_equal false, result.valid?
+    assert_equal ["No customers found."], result.error_messages
+  end
+  
+  should "test customer list get filtering" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(free_new_user_hash(2))
+    assert_equal true, result.valid?
+    result = CG.cancel_subscription(:code => 2)
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    
+    result = CG.new_customer(paid_new_user_hash(3))
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paid_new_user_hash(4))
+    assert_equal true, result.valid?
+    result = CG.cancel_subscription(:code => 4)
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    
+    result = CG.get_customer_list
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    assert_equal "1", result.customer(1)[:code]
+    assert_equal "2", result.customer(2)[:code]
+    assert_equal "3", result.customer(3)[:code]
+    assert_equal "4", result.customer(4)[:code]
+    
+    result = CG.get_customer_list(:subscriptionStatus => "activeOnly")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    assert_equal "1", result.customer(1)[:code]
+    assert_equal nil, result.customer(2)
+    assert_equal "3", result.customer(3)[:code]
+    assert_equal nil, result.customer(4)
+    
+    result = CG.get_customer_list(:subscriptionStatus => "canceledOnly")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    assert_equal nil, result.customer(1)
+    assert_equal "2", result.customer(2)[:code]
+    assert_equal nil, result.customer(3)
+    assert_equal "4", result.customer(4)[:code]
+
+    # TODO: uncomment and verify pass when customer controller bug is fixed
+    # result = CG.get_customer_list(:planCode => "TEST_PLAN_1")
+    # assert_equal false, result.valid?
+    # assert_equal ["No customers found."], result.error_messages
+    # 
+    # result = CG.get_customer_list(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
+    # assert_equal true, result.valid?
+    # assert_equal 4, result.customers.count
+    
+    # result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST")
+    # assert_equal true, result.valid?
+    # assert_equal 2, result.customers.count
+    # 
+    # result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
+    # assert_equal true, result.valid?
+    # assert_equal 1, result.customers.count
+    
+    result = CG.get_customer_list(:canceledAfterDate => Date.today)
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    
+    result = CG.get_customer_list(:createdAfterDate => Date.today)
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    
+    result = CG.get_customer_list(:search => "First")
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
+    
+    result = CG.get_customer_list(:search => "NotFirst")
     assert_equal false, result.valid?
     assert_equal ["No customers found."], result.error_messages
   end

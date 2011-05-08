@@ -57,7 +57,30 @@ module CheddarGetter
     #  :search             =>	Tcustomer name, company, email address and last four digits of credit card.
     #}
     def get_customers(data = nil)
+      warn 'Deprecation Warning: get_customers method is deprecated. Use get_customer_list instead'
       do_request(:item => :customers, :action => :get, :data => data)
+    end
+
+    #https://cheddargetter.com/developers#all-customers
+    #
+    #Any, all, or none of this data hash can be given.
+    #It just filters the returned customers
+    #
+    #data:
+    #
+    #{
+    #  :subscriptionStatus => "activeOnly" or "canceledOnly",
+    #  :planCode           => plan_code, #can take an array of plan codes
+    #  :createdAfterDate	 => date,
+    #  :createdBeforeDate  => date,
+    #  :canceledAfterDate  => date,
+    #  :canceledBeforeDate =>	date,
+    #  :orderBy	           =>	"name" (default), "company", "plan", "billingDatetime" or "createdDatetime"
+    #  :orderByDirection   =>	"asc" (default) or "desc"
+    #  :search             =>	Tcustomer name, company, email address and last four digits of credit card.
+    #}    
+    def get_customer_list(data = nil)
+      do_request(:item => :customers, :action => :list, :data => data)
     end
     
     #https://cheddargetter.com/developers#single-customer
