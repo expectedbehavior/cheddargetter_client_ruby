@@ -53,6 +53,24 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     }
   end
   
+  def paypal_new_user_hash(id, cc_error = nil)
+    { 
+      :code                 => id,
+      :firstName            => "First",
+      :lastName             => "Last",
+      :email                => "buyer_1304894377_per@gmail.com",
+      :firstContactDatetime => Time.now,
+      :subscription => { 
+        :planCode         => "TEST_PLAN_2",
+        :ccFirstName      => "ccFirst",
+        :ccLastName       => "ccLast",
+        :method           => 'paypal',
+        :returnUrl        => 'http://mywebapp.com/login?paypalAccepted',
+        :cancelUrl        => 'http://mywebapp.com/login?paypalCanceled'
+      },
+    }
+  end
+    
   should "check various client init exceptions" do
     assert_raises(CheddarGetter::ClientException) do
       CheddarGetter::Client.new(:product_code => "code", :password => "password")
@@ -158,6 +176,22 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "1", result.customer[:code]
     assert_equal "Test Plan 2", result.customer_plan[:name]
     assert_equal 20, result.customer_invoice[:charges].first[:eachAmount]
+  end
+  
+  should 'create single paypal user' do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    result = CG.new_customer(paypal_new_user_hash(1))
+    assert_equal true, result.valid?
+    assert_equal 1, result.customers.size
+    assert_equal "1", result.customer[:code]
+    assert_equal "Test Plan 2", result.customer_plan[:name]
+    assert_equal 20, result.customer_invoice[:charges].first[:eachAmount]
+    #paypal customer should be in cancelled in paypal-wait status
+    assert_equal true, result.customer_waiting_for_paypal?
+    #paypal customer subscription should include an approve paypal preapproval url    
+    assert_equal true, result.customer_paypal_preapproval_url.include?("https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_ap-preapproval&preapprovalkey=")
   end
   
   should "try to create a customer with various errors" do

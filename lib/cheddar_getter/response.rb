@@ -109,6 +109,10 @@ module CheddarGetter
       (customer_subscriptions(code) || []).first
     end
     
+    def customer_paypal_preapproval_url(code = nil)
+      customer_subscription[:redirectUrl] || ""
+    end
+    
     #Returns all the subscriptions for the given customer.  
     #Only the first one is active, the rest is historical.
     #
