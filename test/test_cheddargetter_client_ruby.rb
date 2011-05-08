@@ -444,6 +444,28 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal false, result.customer_active?    
   end
   
+  should 'check waiting on paypal status' do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    
+    customer = CG.new_customer(paid_new_user_hash(1))    
+    assert_equal true, customer.valid?
+    assert_equal false, customer.customer_canceled?
+    assert_equal true, customer.customer_active?
+    assert_equal false, customer.customer_waiting_for_paypal?
+
+    result = CG.cancel_subscription(:code => customer.customer[:code])
+    assert_equal true, result.valid?
+    assert_equal true, result.customer_canceled?
+    assert_equal false, result.customer_active?    
+    assert_equal false, result.customer_waiting_for_paypal?
+
+    #formatting response to simulate paypal wait status
+    result[:customers]["1"][:subscriptions][0][:cancelType] = "paypal-wait"
+    assert_equal true, result.customer_waiting_for_paypal?
+  end
+  
   should "edit customer and subscription" do
     result = CG.delete_all_customers
     assert_equal true, result.valid?

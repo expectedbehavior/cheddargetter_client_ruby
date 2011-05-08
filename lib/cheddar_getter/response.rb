@@ -249,6 +249,16 @@ module CheddarGetter
       end
     end
     
+    # Is this customer's account pending paypal preapproval confirmation?
+    def customer_waiting_for_paypal?(code = nil)
+      subscription = customer_subscription(code)
+      if subscription[:canceledDatetime] && subscription[:canceledDatetime] <= Time.now && subscription[:cancelType] == 'paypal-wait'
+        true
+      else
+        false
+      end      
+    end
+    
     #access the root keys of the response directly, such as 
     #:customers, :plans, or :errors
     def [](value)
