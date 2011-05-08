@@ -346,6 +346,19 @@ module CheddarGetter
       do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
 
+     #https://cheddargetter.com/developers#delete-charge
+     #
+     #id_hash: {:code => customer_code} OR {:id => customer_id}
+     #
+     #data:
+     #
+     #{
+     #  :chargeId  => required,
+     #}    
+     def delete_charge(id_hash = { }, data = { })
+       do_request(:item => :customers, :action => "delete-charge", :id_hash => id_hash, :data => data)
+     end
+
     # https://cheddargetter.com/developers#one-time-invoice 
     # 
     # id_hash: {:code => customer_code} OR {:id => customer_id}

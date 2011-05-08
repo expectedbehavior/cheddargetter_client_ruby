@@ -804,10 +804,25 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     charge = result.customer_invoice[:charges].detect{ |c| c[:code] == "MY_CREDIT" }
     assert_equal 1, charge[:quantity]
     assert_equal -2, charge[:eachAmount]
-    assert_equal "Whoops", charge[:description]
-    
+    assert_equal "Whoops", charge[:description] 
   end
 
+  should 'delete charge' do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+        
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.add_charge({:code => 1}, { :chargeCode => "MY_CHARGE", :quantity => 1, :eachAmount => 2 })
+    assert_equal true, result.valid?
+    charge = result.customer_invoice[:charges].detect{ |c| c[:code] == "MY_CHARGE" }
+    
+    result = CG.delete_charge({:code => 1}, { :chargeId => charge[:id] })
+    charge = result.customer_invoice[:charges].detect{ |c| c[:code] == "MY_CHARGE" }
+    assert_equal nil, charge
+  end
+  
   should "resubscribe after canceling" do
     result = CG.delete_all_customers
     assert_equal true, result.valid?
