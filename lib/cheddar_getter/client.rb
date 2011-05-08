@@ -322,7 +322,30 @@ module CheddarGetter
     def add_charge(id_hash = { }, data = { })
       do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
-    
+
+    # https://cheddargetter.com/developers#one-time-invoice 
+    # 
+    # id_hash: {:code => customer_code} OR {:id => customer_id}
+    # 
+    # data:
+    # :charges =>
+    # {"0" => {
+    #   :chargeCode, 
+    #   :quantity, 
+    #   :eachAmount
+    #   :description
+    # },
+    # {"1" => {
+    #   :chargeCode, 
+    #   :quantity, 
+    #   :eachAmount
+    #   :description
+    # }
+    # etc
+    def add_one_time_invoice(id_hash = {}, data = {})
+      do_request(:item => :invoices, :action => 'new', :id_hash => id_hash, :data => data)
+    end    
+
     #http://support.cheddargetter.com/faqs/marketing-metrics/marketing-metrics
     #
     #Convenience wrapper of setcookie() for setting a persistent cookie 

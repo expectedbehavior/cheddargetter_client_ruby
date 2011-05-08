@@ -1008,4 +1008,49 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal 'correct', result.customer[:campaignTerm]
   end
   
+  should "create one-time-invoices" do
+    result = CG.delete_all_customers
+    assert_equal true, result.valid?
+    
+    assert_raises(CheddarGetter::ClientException){ CG.add_charge }
+    
+    result = CG.add_one_time_invoice(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal ["Customer not found"], result.error_messages
+    
+    result = CG.add_one_time_invoice(:id => "not_a_valid_id")
+    assert_equal false, result.valid?
+    assert_equal ["Customer not found"], result.error_messages
+    
+    result = CG.new_customer(paid_new_user_hash(1))
+    assert_equal true, result.valid?
+    
+    result = CG.add_one_time_invoice(:code => 1)
+    assert_equal false, result.valid?
+    assert_equal ["A value is required: charges[0][chargeCode]"], result.error_messages
+    
+    result = CG.add_one_time_invoice({:code => 1}, :charges => {"0" => { :chargeCode => "MY_CHARGE" }})
+    assert_equal false, result.valid?
+    assert_equal ["A value is required: charges[0][quantity]"], result.error_messages
+    
+    result = CG.add_one_time_invoice({:code => 1}, :charges => {"0" => { :chargeCode => "MY_CHARGE", :quantity => 1 }})
+    assert_equal false, result.valid?
+    assert_equal ["A value is required: charges[0][eachAmount]"], result.error_messages
+    
+    result = CG.add_one_time_invoice({:code => 1}, :charges => {"0" => { :chargeCode => "MY_CHARGE", :quantity => 1, :eachAmount => 2 }})
+    assert_equal true, result.valid?
+    charge = result.customer_one_time_invoices.first[:charges].detect{ |c| c[:code] == "MY_CHARGE" }
+    assert_equal 1, charge[:quantity]
+    assert_equal 2, charge[:eachAmount]
+    assert_equal nil, charge[:description]
+    
+    result = CG.add_one_time_invoice({:code => 1},  :charges => { "0" =>
+                           { :chargeCode => "MY_CREDIT", :quantity => 1, 
+                             :eachAmount => -2, :description => "Whoops" }})
+    assert_equal true, result.valid?
+    charge = result.customer_one_time_invoices.first[:charges].detect{ |c| c[:code] == "MY_CREDIT" }
+    assert_equal 1, charge[:quantity]
+    assert_equal -2, charge[:eachAmount]
+    assert_equal "Whoops", charge[:description]
+  end
 end

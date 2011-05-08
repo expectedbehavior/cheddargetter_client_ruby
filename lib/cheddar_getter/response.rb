@@ -157,6 +157,9 @@ module CheddarGetter
       customer_invoices(code).map{ |s| s[:transactions] || [] }.flatten
     end
     
+    def customer_one_time_invoices(code = nil)
+      customer_invoices(code).select{ |s| s[:type] == 'one-time' }
+    end
     #Returns the last transaction for the given customer.
     #
     #nil if there are no transactions.

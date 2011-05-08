@@ -53,11 +53,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     }
   end
   
-  should "not pooop out" do
-    result = CG.edit_customer({:code => "1"}, {:firstName => "New", 
-                                :subscription => { :ccZip => "46268" }})
-    assert_equal true, result.valid?
-    assert_equal "New", result.customer[:firstName]
-    assert_equal "46268", result.customer_subscription[:ccZip]
+  should "" do
+
   end
 end
