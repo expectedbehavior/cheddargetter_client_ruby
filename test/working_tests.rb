@@ -1,3 +1,7 @@
+# This file used to copy whatever test you are working on into
+# to run individually.  This is to make up for test unit's lack
+# of ability to run individual tests!
+
 require File.join(File.dirname(__FILE__), 'helper')
 
 class TestCheddargetterClientRuby < Test::Unit::TestCase
@@ -71,22 +75,8 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     }
   end
     
-  should 'update single paypal user' do
-    result = CG.delete_all_customers
-    assert_equal true, result.valid?
-    
-    result = CG.new_customer(paypal_new_user_hash(1))
-    assert_equal true, result.valid?
-    assert_equal 1, result.customers.size
-    assert_equal "1", result.customer[:code]
-    assert_equal "Test Plan 2", result.customer_plan[:name]
-    assert_equal 20, result.customer_invoice[:charges].first[:eachAmount]
-    #paypal customer should be in cancelled in paypal-wait status
-    assert_equal true, result.customer_waiting_for_paypal?
-    #paypal customer subscription should include an approve paypal preapproval url    
-    assert_equal true, result.customer_paypal_preapproval_url.include?("https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_ap-preapproval&preapprovalkey=")
+  should "" do
 
 
-    
   end
 end

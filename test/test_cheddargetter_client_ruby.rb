@@ -1002,22 +1002,21 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal nil, result.customer(3)
     assert_equal "4", result.customer(4)[:code]
 
-    # TODO: uncomment and verify pass when customer controller bug is fixed
-    # result = CG.get_customer_list(:planCode => "TEST_PLAN_1")
-    # assert_equal false, result.valid?
-    # assert_equal ["No customers found."], result.error_messages
-    # 
-    # result = CG.get_customer_list(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
-    # assert_equal true, result.valid?
-    # assert_equal 4, result.customers.count
+    result = CG.get_customer_list(:planCode => "TEST_PLAN_1")
+    assert_equal false, result.valid?
+    assert_equal ["No customers found."], result.error_messages
+
+    result = CG.get_customer_list(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
+    assert_equal true, result.valid?
+    assert_equal 4, result.customers.count
     
-    # result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST")
-    # assert_equal true, result.valid?
-    # assert_equal 2, result.customers.count
-    # 
-    # result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
-    # assert_equal true, result.valid?
-    # assert_equal 1, result.customers.count
+    result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST")
+    assert_equal true, result.valid?
+    assert_equal 2, result.customers.count
+    
+    result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
+    assert_equal true, result.valid?
+    assert_equal 1, result.customers.count
     
     result = CG.get_customer_list(:canceledAfterDate => Date.today)
     assert_equal true, result.valid?
