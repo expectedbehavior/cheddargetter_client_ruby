@@ -20,6 +20,8 @@ end
 
 CGEmail = "cheddargetter.rubygem.dev@gmail.com"
 CGProductCode = 'RUBYGEM'
+CGFreePlanId  = "a6a816c8-6d14-11e0-bcd4-40406799fa1e"
+
 CG = CheddarGetter::Client.new(:product_code => CGProductCode,
                                :username => CGEmail,
                                :password => "t3stpassword")
