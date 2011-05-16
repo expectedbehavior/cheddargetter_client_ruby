@@ -75,8 +75,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     }
   end
     
-  should "" do
-
+  should '' do
 
   end
 end
