@@ -109,6 +109,10 @@ module CheddarGetter
       (customer_subscriptions(code) || []).first
     end
     
+    def customer_paypal_preapproval_url(code = nil)
+      customer_subscription[:redirectUrl] || ""
+    end
+    
     #Returns all the subscriptions for the given customer.  
     #Only the first one is active, the rest is historical.
     #
@@ -157,6 +161,9 @@ module CheddarGetter
       customer_invoices(code).map{ |s| s[:transactions] || [] }.flatten
     end
     
+    def customer_one_time_invoices(code = nil)
+      customer_invoices(code).select{ |s| s[:type] == 'one-time' }
+    end
     #Returns the last transaction for the given customer.
     #
     #nil if there are no transactions.
@@ -231,6 +238,29 @@ module CheddarGetter
     def customer_canceled?(code = nil)
       sub = customer_subscription(code)
       sub ? !!sub[:canceledDatetime] : nil
+    end
+    
+    # Get an array representation of a single customer's current subscription
+    # @throws CheddarGetter_Response_Exception if the response type is incompatible or if a $code 
+    # is not provided and the response contains more than one customer
+    # @return array
+    def customer_active?(code = nil)
+      subscription = customer_subscription(code)
+      if subscription[:canceledDatetime] && subscription[:canceledDatetime] <= Time.now
+        false
+      else
+        true
+      end
+    end
+    
+    # Is this customer's account pending paypal preapproval confirmation?
+    def customer_waiting_for_paypal?(code = nil)
+      subscription = customer_subscription(code)
+      if subscription[:canceledDatetime] && subscription[:canceledDatetime] <= Time.now && subscription[:cancelType] == 'paypal-wait'
+        true
+      else
+        false
+      end      
     end
     
     #access the root keys of the response directly, such as 

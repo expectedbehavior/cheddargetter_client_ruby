@@ -57,7 +57,30 @@ module CheddarGetter
     #  :search             =>	Tcustomer name, company, email address and last four digits of credit card.
     #}
     def get_customers(data = nil)
+      warn 'Deprecation Warning: get_customers method is deprecated. Use get_customer_list instead'
       do_request(:item => :customers, :action => :get, :data => data)
+    end
+
+    #https://cheddargetter.com/developers#all-customers
+    #
+    #Any, all, or none of this data hash can be given.
+    #It just filters the returned customers
+    #
+    #data:
+    #
+    #{
+    #  :subscriptionStatus => "activeOnly" or "canceledOnly",
+    #  :planCode           => plan_code, #can take an array of plan codes
+    #  :createdAfterDate	 => date,
+    #  :createdBeforeDate  => date,
+    #  :canceledAfterDate  => date,
+    #  :canceledBeforeDate =>	date,
+    #  :orderBy	           =>	"name" (default), "company", "plan", "billingDatetime" or "createdDatetime"
+    #  :orderByDirection   =>	"asc" (default) or "desc"
+    #  :search             =>	Tcustomer name, company, email address and last four digits of credit card.
+    #}    
+    def get_customer_list(data = nil)
+      do_request(:item => :customers, :action => :list, :data => data)
     end
     
     #https://cheddargetter.com/developers#single-customer
@@ -322,7 +345,43 @@ module CheddarGetter
     def add_charge(id_hash = { }, data = { })
       do_request(:item => :customers, :action => "add-charge", :id_hash => id_hash, :data => data)
     end
-    
+
+     #https://cheddargetter.com/developers#delete-charge
+     #
+     #id_hash: {:code => customer_code} OR {:id => customer_id}
+     #
+     #data:
+     #
+     #{
+     #  :chargeId  => required,
+     #}    
+     def delete_charge(id_hash = { }, data = { })
+       do_request(:item => :customers, :action => "delete-charge", :id_hash => id_hash, :data => data)
+     end
+
+    # https://cheddargetter.com/developers#one-time-invoice 
+    # 
+    # id_hash: {:code => customer_code} OR {:id => customer_id}
+    # 
+    # data:
+    # :charges =>
+    # {"0" => {
+    #   :chargeCode, 
+    #   :quantity, 
+    #   :eachAmount
+    #   :description
+    # },
+    # {"1" => {
+    #   :chargeCode, 
+    #   :quantity, 
+    #   :eachAmount
+    #   :description
+    # }
+    # etc
+    def add_one_time_invoice(id_hash = {}, data = {})
+      do_request(:item => :invoices, :action => 'new', :id_hash => id_hash, :data => data)
+    end    
+
     #http://support.cheddargetter.com/faqs/marketing-metrics/marketing-metrics
     #
     #Convenience wrapper of setcookie() for setting a persistent cookie 

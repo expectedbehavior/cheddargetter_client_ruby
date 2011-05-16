@@ -18,7 +18,11 @@ require 'cheddargetter_client_ruby'
 class Test::Unit::TestCase
 end
 
-CG = CheddarGetter::Client.new(:product_code => "GEM_TEST",
-                               :username => "michael@expectedbehavior.com",
-                               :password => "DROlOAeQpWey6J2cqTyEzH")
-                               
+CGEmail       = "michael@expectedbehavior.com"
+CGProductCode = 'GEM_TEST'
+CGPassword    = 'DROlOAeQpWey6J2cqTyEzH'
+CGFreePlanId  = "fe96b9e6-53a2-102e-b098-40402145ee8b"
+
+CG = CheddarGetter::Client.new(:product_code => CGProductCode,
+                               :username => CGEmail,
+                               :password => CGPassword)
