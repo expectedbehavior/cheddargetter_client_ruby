@@ -239,8 +239,8 @@ module CheddarGetter
     end
     
     #https://cheddargetter.com/developers#delete-all-customers
-    def delete_all_customers
-      do_request(:item => :customers, :action => "delete-all/confirm/1")
+    def delete_all_customers(time = Time.now.to_i)
+      do_request(:item => :customers, :action => "delete-all/confirm/#{time}")
     end
     
     #https://cheddargetter.com/developers#update-subscription
