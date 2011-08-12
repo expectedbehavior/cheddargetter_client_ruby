@@ -310,7 +310,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     result = CG.new_customer(free_new_user_hash(3))
     assert_equal true, result.valid?
     
-    result = CG.get_customers
+    result = CG.get_customer_list
     assert_equal true, result.valid?
     assert_equal 3, result.customers.count
     assert_equal "1", result.customer(1)[:code]
@@ -899,7 +899,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal true, result.valid?
     assert_equal true, result.customer_canceled?
     
-    result = CG.get_customers
+    result = CG.get_customer_list
     assert_equal true, result.valid?
     assert_equal 4, result.customers.count
     assert_equal "1", result.customer(1)[:code]
@@ -907,7 +907,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "3", result.customer(3)[:code]
     assert_equal "4", result.customer(4)[:code]
     
-    result = CG.get_customers(:subscriptionStatus => "activeOnly")
+    result = CG.get_customer_list(:subscriptionStatus => "activeOnly")
     assert_equal true, result.valid?
     assert_equal 2, result.customers.count
     assert_equal "1", result.customer(1)[:code]
@@ -915,7 +915,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal "3", result.customer(3)[:code]
     assert_equal nil, result.customer(4)
     
-    result = CG.get_customers(:subscriptionStatus => "canceledOnly")
+    result = CG.get_customer_list(:subscriptionStatus => "canceledOnly")
     assert_equal true, result.valid?
     assert_equal 2, result.customers.count
     assert_equal nil, result.customer(1)
@@ -923,35 +923,35 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     assert_equal nil, result.customer(3)
     assert_equal "4", result.customer(4)[:code]
     
-    result = CG.get_customers(:planCode => "TEST_PLAN_1")
+    result = CG.get_customer_list(:planCode => "TEST_PLAN_1")
     assert_equal false, result.valid?
     assert_equal ["No customers found."], result.error_messages
     
-    result = CG.get_customers(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
+    result = CG.get_customer_list(:planCode => ["TEST_PLAN_1", "TEST_PLAN_2", "FREE_PLAN_TEST"])
     assert_equal true, result.valid?
     assert_equal 4, result.customers.count
     
-    result = CG.get_customers(:planCode => "FREE_PLAN_TEST")
+    result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST")
     assert_equal true, result.valid?
     assert_equal 2, result.customers.count
     
-    result = CG.get_customers(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
+    result = CG.get_customer_list(:planCode => "FREE_PLAN_TEST", :subscriptionStatus => "canceledOnly")
     assert_equal true, result.valid?
     assert_equal 1, result.customers.count
     
-    result = CG.get_customers(:canceledAfterDate => Date.today)
+    result = CG.get_customer_list(:canceledAfterDate => Date.today)
     assert_equal true, result.valid?
     assert_equal 2, result.customers.count
     
-    result = CG.get_customers(:createdAfterDate => Date.today)
+    result = CG.get_customer_list(:createdAfterDate => Date.today)
     assert_equal true, result.valid?
     assert_equal 4, result.customers.count
     
-    result = CG.get_customers(:search => "First")
+    result = CG.get_customer_list(:search => "First")
     assert_equal true, result.valid?
     assert_equal 4, result.customers.count
     
-    result = CG.get_customers(:search => "NotFirst")
+    result = CG.get_customer_list(:search => "NotFirst")
     assert_equal false, result.valid?
     assert_equal ["No customers found."], result.error_messages
   end
@@ -1048,7 +1048,7 @@ class TestCheddargetterClientRuby < Test::Unit::TestCase
     CheddarGetter::Client::FIX_UP_KEYS.delete(:test)
     
     CheddarGetter::Response::KEY_TO_DATA_TYPE[:test] = :nope
-    response = CG.get_customers
+    response = CG.get_customer_list
     response.send(:deep_fix_data_types!, data)
     assert_equal "string", data[:test]
     CheddarGetter::Response::KEY_TO_DATA_TYPE.delete(:test)
