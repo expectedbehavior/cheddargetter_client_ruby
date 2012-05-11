@@ -15,10 +15,10 @@ It allows you to interface with the Cheddar Getter API using simple calls, i.e.:
       :subscription => {
         :planCode     => 'THE_PLAN_CODE',
         :ccFirstName  => 'Example',
-        :ccLastName'  => 'Customer',
-        :ccNumber'    => '4111111111111111',
+        :ccLastName   => 'Customer',
+        :ccNumber     => '4111111111111111',
         :ccExpiration => '04/2011',
-        :ccZip'       => '90210'
+        :ccZip        => '90210'
       }
     )
 
