@@ -1,6 +1,6 @@
 source "http://rubygems.org"
 gem "httparty", ">= 0.4.3"
-
+gem "crack",    ">= 0.3.0"
 
 group :development do
   gem "shoulda", ">= 0"
